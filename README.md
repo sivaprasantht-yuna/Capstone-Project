@@ -625,6 +625,5 @@ This project is licensed under the MIT License — see the [LICENSE](LICENSE) fi
 
 **Built with ❤️ as an S5 Mini Project**  
 *Designed to be production-deployed at any engineering college*
-Project setup completed successfully.
 
 </div>
