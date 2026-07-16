@@ -33,6 +33,7 @@ jobs:
           cp -r matching-service deploy_dir/
           cp hf-deploy/app.py deploy_dir/
           cp hf-deploy/packages.txt deploy_dir/
+          cp matching-service/requirements.txt deploy_dir/
           cat << 'EOF' > deploy_dir/README.md
           ---
           title: Capstone Backend

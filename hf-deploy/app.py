@@ -4,9 +4,6 @@ import time
 import sys
 
 # 1. Start the FastAPI Matching Service on port 8000
-print("Installing FastAPI dependencies...")
-subprocess.run([sys.executable, "-m", "pip", "install", "-r", "matching-service/requirements.txt"])
-
 print("Starting FastAPI Matching Service on localhost:8000...")
 fastapi_process = subprocess.Popen(
     [sys.executable, "-m", "uvicorn", "main:app", "--host", "127.0.0.1", "--port", "8000"],
