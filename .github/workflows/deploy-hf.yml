@@ -33,6 +33,18 @@ jobs:
           cp -r matching-service deploy_dir/
           cp hf-deploy/app.py deploy_dir/
           cp hf-deploy/packages.txt deploy_dir/
+          cat << 'EOF' > deploy_dir/README.md
+          ---
+          title: Capstone Backend
+          emoji: 🚀
+          colorFrom: blue
+          colorTo: indigo
+          sdk: gradio
+          sdk_version: "4.0.0"
+          app_file: app.py
+          pinned: false
+          ---
+          EOF
 
       - name: Push to Hugging Face
         env:
