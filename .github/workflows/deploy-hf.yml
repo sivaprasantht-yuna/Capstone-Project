@@ -39,19 +39,11 @@ jobs:
           emoji: 🚀
           colorFrom: blue
           colorTo: indigo
-          sdk: docker
+          sdk: gradio
+          sdk_version: "4.36.0"
+          app_file: app.py
           pinned: false
           ---
-          EOF
-
-          cat << 'EOF' > deploy_dir/Dockerfile
-          FROM python:3.10-slim
-          RUN apt-get update && apt-get install -y openjdk-17-jre-headless && rm -rf /var/lib/apt/lists/*
-          WORKDIR /app
-          COPY . .
-          RUN pip install -r matching-service/requirements.txt
-          EXPOSE 7860
-          CMD ["python", "app.py"]
           EOF
 
       - name: Push to Hugging Face
