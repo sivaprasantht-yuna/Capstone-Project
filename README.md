@@ -577,6 +577,31 @@ docker compose up --build -d
 
 ---
 
+## 🤗 Deploying to Hugging Face Spaces (Docker)
+
+CapstoneHub's backend and matching service can be deployed as a single container on **Hugging Face Spaces**.
+
+1. Create a new **Docker** Space on Hugging Face.
+2. In the Space Settings, add your Supabase connection strings as **Secrets**:
+   - `DB_URL`, `DB_USERNAME`, `DB_PASSWORD`
+   - `JWT_SECRET`
+   - `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`
+3. Push this repository to your Space. The root `Dockerfile` will automatically build the Spring Boot and Python FastAPI applications.
+4. The backend API will be available at `https://your-space-name.hf.space/api/v1`. Point your Vercel frontend to this URL!
+
+### 🤖 Automated GitHub Actions (CI/CD)
+This repository includes two GitHub Actions workflows to automate your Hugging Face deployment:
+1. **Sync to Hugging Face (`sync-to-hf.yml`)**: Automatically deploys future updates to your HF Space when you push to the `main` branch.
+2. **Keep Awake (`keep-alive.yml`)**: Pings your Space every 15 minutes so the free tier doesn't go to sleep.
+
+**Required GitHub Configuration:**
+In your GitHub Repository, go to **Settings > Secrets and variables > Actions**:
+- **Secrets**: Add `HF_TOKEN` (Create a write-access token in your HF account settings).
+- **Variables**: Add `HF_USERNAME` (e.g., `sivaprasanth`) and `HF_SPACE_NAME` (e.g., `capstonehub`).
+- **Variables**: Add `HF_SPACE_URL` (e.g., `https://sivaprasanth-capstonehub.hf.space/api/v1/health` or any valid endpoint) for the keep-alive script.
+
+---
+
 ## 🧪 Running Tests
 
 ```bash
