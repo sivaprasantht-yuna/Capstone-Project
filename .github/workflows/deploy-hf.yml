@@ -1,0 +1,49 @@
+name: Deploy to Hugging Face Spaces
+
+on:
+  push:
+    branches:
+      - main  # Triggers the deployment whenever you push to the main branch
+  workflow_dispatch:
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          lfs: true
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: 'maven'
+
+      - name: Build with Maven
+        run: mvn clean package -DskipTests -f backend/pom.xml
+
+      - name: Prepare Deployment Artifacts
+        run: |
+          mkdir deploy_dir
+          mv backend/target/*.jar deploy_dir/app.jar
+          cp -r matching-service deploy_dir/
+          cp hf-deploy/app.py deploy_dir/
+          cp hf-deploy/packages.txt deploy_dir/
+
+      - name: Push to Hugging Face
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          cd deploy_dir
+          git init
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          # CHANGE THIS URL TO MATCH YOUR HUGGING FACE SPACE
+          git remote add hf https://YOUR_HF_USERNAME:$HF_TOKEN@huggingface.co/spaces/YOUR_HF_USERNAME/YOUR_SPACE_NAME
+          git add .
+          git commit -m "Deploy compiled Spring Boot backend and FastAPI matching service"
+          git push --force hf master:main
