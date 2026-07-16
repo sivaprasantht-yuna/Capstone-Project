@@ -26,10 +26,10 @@ COPY matching-service/ ./matching-service/
 COPY --from=backend-builder /app/target/*.jar ./app.jar
 
 # Copy Supervisor configuration
-COPY hf-deploy/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+COPY docker/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 
-# Expose port for Hugging Face (7860)
-EXPOSE 7860
+# Expose port for Render (8080)
+EXPOSE 8080
 
 # Run supervisor
 CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]
