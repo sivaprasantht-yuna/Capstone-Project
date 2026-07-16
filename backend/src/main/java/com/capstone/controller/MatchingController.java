@@ -29,7 +29,7 @@ import java.util.Map;
  * ═══════════════════════════════════════════════════════════════════
  */
 @RestController
-@RequestMapping("/matching")
+@RequestMapping("/api/v1/matching")
 @RequiredArgsConstructor
 @Tag(name = "Matching", description = "AI-powered teammate and mentor matching via Python microservice")
 @SecurityRequirement(name = "bearerAuth")

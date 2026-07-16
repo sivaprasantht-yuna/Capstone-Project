@@ -17,7 +17,7 @@ import java.util.List;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/milestones")
+@RequestMapping("/api/v1/milestones")
 @RequiredArgsConstructor
 @Tag(name = "Milestones", description = "Milestone management, submissions, and evaluations")
 public class MilestoneController {

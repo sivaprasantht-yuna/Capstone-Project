@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/mentorships")
+@RequestMapping("/api/v1/mentorships")
 @RequiredArgsConstructor
 @Tag(name = "Mentorships", description = "Mentor request, accept/reject, and rating endpoints")
 public class MentorshipController {

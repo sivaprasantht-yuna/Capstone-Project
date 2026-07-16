@@ -10,7 +10,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/certificates")
+@RequestMapping("/api/v1/certificates")
 @RequiredArgsConstructor
 @Tag(name = "Certificates", description = "PDF certificate generation and retrieval")
 public class CertificateController {
