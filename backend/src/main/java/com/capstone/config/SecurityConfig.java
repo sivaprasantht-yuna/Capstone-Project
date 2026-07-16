@@ -71,16 +71,16 @@ public class SecurityConfig {
             )
             .authorizeHttpRequests(auth -> auth
                 // Public endpoints
-                .requestMatchers("/auth/**").permitAll()
+                .requestMatchers("/api/v1/auth/**").permitAll()
                 .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
-                .requestMatchers(HttpMethod.GET, "/projects", "/projects/**").permitAll()
-                .requestMatchers(HttpMethod.GET, "/skills", "/skills/**").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/v1/projects", "/api/v1/projects/**").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/v1/skills", "/api/v1/skills/**").permitAll()
                 .requestMatchers("/ws/**").permitAll()   // WebSocket handshake
                 // Role-restricted endpoints
-                .requestMatchers("/admin/**").hasRole("ADMIN")
-                .requestMatchers("/industry/**").hasAnyRole("INDUSTRY", "ADMIN")
-                .requestMatchers("/faculty/**").hasAnyRole("FACULTY", "ADMIN")
-                .requestMatchers("/matching/**").hasAnyRole("STUDENT", "FACULTY", "ADMIN")
+                .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
+                .requestMatchers("/api/v1/industry/**").hasAnyRole("INDUSTRY", "ADMIN")
+                .requestMatchers("/api/v1/faculty/**").hasAnyRole("FACULTY", "ADMIN")
+                .requestMatchers("/api/v1/matching/**").hasAnyRole("STUDENT", "FACULTY", "ADMIN")
                 // Everything else requires authentication
                 .anyRequest().authenticated()
             )
