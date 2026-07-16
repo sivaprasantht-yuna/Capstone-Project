@@ -8,8 +8,10 @@ let stompClient: Client | null = null
 export function connectWebSocket(userId: number): Client {
   const { user } = store.getState().auth
 
+  const wsUrl = import.meta.env.VITE_WS_URL || '/ws'
+
   stompClient = new Client({
-    webSocketFactory: () => new SockJS('/ws'),
+    webSocketFactory: () => new SockJS(wsUrl),
     connectHeaders: {
       Authorization: `Bearer ${user?.accessToken || ''}`,
     },
