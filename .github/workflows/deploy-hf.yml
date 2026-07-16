@@ -44,6 +44,9 @@ jobs:
           git config user.email "github-actions@github.com"
           # CHANGE THIS URL TO MATCH YOUR HUGGING FACE SPACE
           git remote add hf https://TGAshwinYT:$HF_TOKEN@huggingface.co/spaces/TGAshwinYT/capstone-spring-backend
+          git lfs install
+          git lfs track "*.jar"
+          git add .gitattributes
           git add .
           git commit -m "Deploy compiled Spring Boot backend and FastAPI matching service"
           git push --force hf master:main
