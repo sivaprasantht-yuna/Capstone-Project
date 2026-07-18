@@ -70,6 +70,9 @@ public class Project {
     @Builder.Default
     private Boolean similarityFlag = false;
 
+    @Column(name = "reference_summary", columnDefinition = "TEXT")
+    private String referenceSummary;
+
     public enum ProjectStatus {
         OPEN,           // posted, awaiting admin approval
         PENDING_REVIEW, // submitted to admin for approval

@@ -13,6 +13,8 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+import com.capstone.service.DocumentSanitizerClient;
 
 import java.util.List;
 
@@ -24,6 +26,7 @@ public class ProjectController {
 
     private final ProjectRepository projectRepository;
     private final UserRepository userRepository;
+    private final DocumentSanitizerClient documentSanitizerClient;
 
     @GetMapping
     public ResponseEntity<List<Project>> getAllApprovedProjects(
@@ -91,6 +94,20 @@ public class ProjectController {
     public ResponseEntity<Void> upvote(@PathVariable Long id) {
         projectRepository.incrementUpvote(id);
         return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/{id}/reference-document")
+    @PreAuthorize("isAuthenticated()")
+    @Transactional
+    public ResponseEntity<Project> uploadReferenceDocument(
+            @PathVariable Long id,
+            @RequestParam("file") MultipartFile file) {
+
+        return projectRepository.findById(id).map(p -> {
+            String summary = documentSanitizerClient.processPdfDocument(file);
+            p.setReferenceSummary(summary);
+            return ResponseEntity.ok(projectRepository.save(p));
+        }).orElse(ResponseEntity.notFound().build());
     }
 
     @Data

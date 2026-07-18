@@ -19,7 +19,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from routers import teammate_match, mentor_match, idea_similarity
-from routers import graph_analysis
+from routers import graph_analysis, document_sanitizer
 
 app = FastAPI(
     title="Capstone Matching Microservice",
@@ -38,6 +38,7 @@ app.include_router(teammate_match.router, prefix="/match",  tags=["Teammate Matc
 app.include_router(mentor_match.router,   prefix="/match",  tags=["Mentor Matching"])
 app.include_router(idea_similarity.router,prefix="/match",  tags=["Idea Similarity"])
 app.include_router(graph_analysis.router)                                       # /graph/*
+app.include_router(document_sanitizer.router)
 
 
 @app.get("/health", tags=["Health"])

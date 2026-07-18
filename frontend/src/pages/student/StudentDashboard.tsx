@@ -8,6 +8,9 @@ import {
 import { Link } from 'react-router-dom'
 import { RootState } from '../../store'
 import api from '../../lib/api'
+import { useDropzone } from 'react-dropzone'
+import ReactMarkdown from 'react-markdown'
+import toast from 'react-hot-toast'
 
 interface DashboardStats {
   teamName?: string
@@ -22,6 +25,8 @@ export default function StudentDashboard() {
   const [stats, setStats] = useState<DashboardStats>({})
   const [teams, setTeams] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const [uploadingPdf, setUploadingPdf] = useState(false)
+  const [referenceMarkdown, setReferenceMarkdown] = useState<string | null>(null)
 
   useEffect(() => {
     const fetchData = async () => {
@@ -35,6 +40,9 @@ export default function StudentDashboard() {
             projectTitle: team.project?.title,
             totalPoints: team.totalScore,
           })
+          if (team.project?.referenceSummary) {
+            setReferenceMarkdown(team.project.referenceSummary)
+          }
         }
       } catch (e) {
         console.error(e)
@@ -44,6 +52,34 @@ export default function StudentDashboard() {
     }
     fetchData()
   }, [])
+
+  const onDrop = async (acceptedFiles: File[]) => {
+    if (acceptedFiles.length === 0 || !teams[0]?.project?.id) return
+    const file = acceptedFiles[0]
+    
+    setUploadingPdf(true)
+    const formData = new FormData()
+    formData.append('file', file)
+
+    try {
+      const res = await api.post(`/projects/${teams[0].project.id}/reference-document`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      })
+      setReferenceMarkdown(res.data.referenceSummary)
+      toast.success('Document converted successfully!')
+    } catch (error) {
+      console.error(error)
+      toast.error('Failed to convert document.')
+    } finally {
+      setUploadingPdf(false)
+    }
+  }
+
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+    onDrop,
+    accept: { 'application/pdf': ['.pdf'] },
+    multiple: false
+  })
 
   const kpis = [
     { label: 'Team Status', value: teams.length > 0 ? teams[0].status : 'No Team', icon: <Users size={20} />, color: 'from-primary-600 to-violet-600', link: '/student/team' },
@@ -156,6 +192,46 @@ export default function StudentDashboard() {
           </div>
         </div>
       </div>
+
+      {/* Senior Reference Document Section */}
+      {teams.length > 0 && teams[0].project && (
+        <div className="glass-card p-6 animate-fade-in mt-6">
+          <h2 className="font-semibold text-white mb-4 flex items-center gap-2">
+            <BookOpen size={18} className="text-primary-400" />
+            Convert Project to Senior Reference Document
+          </h2>
+          
+          {!referenceMarkdown ? (
+            <div 
+              {...getRootProps()} 
+              className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-colors ${
+                isDragActive ? 'border-primary-500 bg-primary-500/10' : 'border-white/20 hover:border-white/40 hover:bg-white/5'
+              }`}
+            >
+              <input {...getInputProps()} />
+              <div className="flex flex-col items-center justify-center space-y-3">
+                <BookOpen size={32} className={isDragActive ? 'text-primary-400' : 'text-white/40'} />
+                {uploadingPdf ? (
+                  <p className="text-white/70">Analyzing document with AI...</p>
+                ) : isDragActive ? (
+                  <p className="text-primary-300">Drop the PDF here...</p>
+                ) : (
+                  <>
+                    <p className="text-white/70">Drag & drop your project PDF here, or click to select</p>
+                    <p className="text-xs text-white/40">Only .pdf files are supported</p>
+                  </>
+                )}
+              </div>
+            </div>
+          ) : (
+            <div className="bg-surface-100 rounded-xl p-6 border border-white/10">
+              <div className="prose prose-invert max-w-none prose-h2:text-primary-400 prose-a:text-accent-400">
+                <ReactMarkdown>{referenceMarkdown}</ReactMarkdown>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   )
 }
