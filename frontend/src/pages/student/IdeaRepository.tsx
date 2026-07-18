@@ -86,9 +86,20 @@ export default function IdeaRepository() {
             transition={{ delay: i * 0.05 }} className="glass-card-hover p-5">
             <div className="flex items-start justify-between gap-2 mb-3">
               <h3 className="font-semibold text-white leading-tight">{p.title}</h3>
-              {p.domain && (
-                <span className={`badge badge-primary flex-shrink-0`}>{p.domain}</span>
-              )}
+              <div className="flex flex-col gap-1 items-end">
+                {p.domain && (
+                  <span className="badge badge-primary flex-shrink-0">{p.domain}</span>
+                )}
+                {p.status && (
+                  <span className={`badge flex-shrink-0 ${
+                    p.status === 'REJECTED' ? 'badge-danger' : 
+                    p.status === 'APPROVED' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 
+                    'badge-accent'
+                  }`}>
+                    {p.status === 'OPEN' || p.status === 'PENDING_REVIEW' ? 'PENDING' : p.status}
+                  </span>
+                )}
+              </div>
             </div>
             <p className="text-white/50 text-sm line-clamp-3 mb-4">{p.description}</p>
             {p.techStack && (

@@ -22,6 +22,9 @@ public interface ProjectRepository extends JpaRepository<Project, Long> {
     @Query("SELECT p FROM Project p WHERE p.status = 'APPROVED' ORDER BY p.upvoteCount DESC")
     List<Project> findApprovedOrderByUpvotes();
 
+    @Query("SELECT p FROM Project p ORDER BY p.upvoteCount DESC")
+    List<Project> findAllOrderByUpvotesDesc();
+
     @Query("SELECT DISTINCT p.domain FROM Project p WHERE p.domain IS NOT NULL")
     List<String> findAllDistinctDomains();
 

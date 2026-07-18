@@ -62,10 +62,10 @@ export default function StudentDashboard() {
     formData.append('file', file)
 
     try {
-      const res = await api.post(`/projects/${teams[0].project.id}/reference-document`, formData, {
+      const res = await api.post(`/projects/${teams[0].project.id}/sanitize`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       })
-      setReferenceMarkdown(res.data.referenceSummary)
+      setReferenceMarkdown(res.data.document)
       toast.success('Document converted successfully!')
     } catch (error) {
       console.error(error)

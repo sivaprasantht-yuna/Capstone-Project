@@ -14,9 +14,10 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
-import com.capstone.service.DocumentSanitizerClient;
+import com.capstone.service.DocumentSanitizerService;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/projects")
@@ -26,7 +27,7 @@ public class ProjectController {
 
     private final ProjectRepository projectRepository;
     private final UserRepository userRepository;
-    private final DocumentSanitizerClient documentSanitizerClient;
+    private final DocumentSanitizerService sanitizerService;
 
     @GetMapping
     public ResponseEntity<List<Project>> getAllApprovedProjects(
@@ -36,7 +37,7 @@ public class ProjectController {
         if (domain != null) return ResponseEntity.ok(projectRepository.findByDomain(domain));
         if (status != null) return ResponseEntity.ok(
                 projectRepository.findByStatus(Project.ProjectStatus.valueOf(status.toUpperCase())));
-        return ResponseEntity.ok(projectRepository.findApprovedOrderByUpvotes());
+        return ResponseEntity.ok(projectRepository.findAllOrderByUpvotesDesc());
     }
 
     @GetMapping("/{id}")
@@ -96,18 +97,31 @@ public class ProjectController {
         return ResponseEntity.ok().build();
     }
 
-    @PostMapping("/{id}/reference-document")
+    @PostMapping("/{projectId}/sanitize")
     @PreAuthorize("isAuthenticated()")
-    @Transactional
-    public ResponseEntity<Project> uploadReferenceDocument(
-            @PathVariable Long id,
+    public ResponseEntity<?> convertToReferenceDocument(
+            @PathVariable Long projectId,
             @RequestParam("file") MultipartFile file) {
 
-        return projectRepository.findById(id).map(p -> {
-            String summary = documentSanitizerClient.processPdfDocument(file);
-            p.setReferenceSummary(summary);
-            return ResponseEntity.ok(projectRepository.save(p));
-        }).orElse(ResponseEntity.notFound().build());
+        try {
+            // 1. Forward to Python FastAPI and get AI response
+            String cleanedMarkdown = sanitizerService.callPythonSanitizer(file);
+
+            // 2. Fetch target project entity and update the field
+            return projectRepository.findById(projectId)
+                    .map(project -> {
+                        project.setReferenceSummary(cleanedMarkdown);
+                        projectRepository.save(project);
+                        return ResponseEntity.ok(Map.of(
+                                "message", "Project converted to reference document successfully",
+                                "document", cleanedMarkdown
+                        ));
+                    })
+                    .orElse(ResponseEntity.notFound().build());
+
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(Map.of("error", e.getMessage()));
+        }
     }
 
     @Data
