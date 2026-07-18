@@ -37,7 +37,7 @@ public class ProjectController {
         if (domain != null) return ResponseEntity.ok(projectRepository.findByDomain(domain));
         if (status != null) return ResponseEntity.ok(
                 projectRepository.findByStatus(Project.ProjectStatus.valueOf(status.toUpperCase())));
-        return ResponseEntity.ok(projectRepository.findAllOrderByUpvotesDesc());
+        return ResponseEntity.ok(projectRepository.findByOrderByUpvoteCountDesc());
     }
 
     @GetMapping("/{id}")
