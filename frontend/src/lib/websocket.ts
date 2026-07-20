@@ -11,7 +11,9 @@ export function connectWebSocket(userId: number): Client {
   const wsUrl = import.meta.env.VITE_WS_URL || '/ws'
 
   stompClient = new Client({
-    webSocketFactory: () => new SockJS(wsUrl),
+    webSocketFactory: () => new SockJS(wsUrl, null, {
+      transports: ['websocket'],
+    }),
     connectHeaders: {
       Authorization: `Bearer ${user?.accessToken || ''}`,
     },
