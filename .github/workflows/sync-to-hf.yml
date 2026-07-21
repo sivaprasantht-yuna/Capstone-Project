@@ -15,7 +15,7 @@ jobs:
 
     steps:
       - name: Checkout GitHub Repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v4.2.2
         with:
           fetch-depth: 1   # Shallow clone — we'll create a fresh orphan anyway
 
