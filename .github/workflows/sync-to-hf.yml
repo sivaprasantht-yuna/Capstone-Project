@@ -40,21 +40,20 @@ jobs:
           git add .
 
           # Generate the HF Space README with required YAML metadata (fixes repo card warning)
-          cat > README.md << 'EOF'
----
-title: CapstoneHub Backend
-emoji: 🎓
-colorFrom: blue
-colorTo: indigo
-sdk: docker
-pinned: false
----
-
-# CapstoneHub — Java Spring Boot Backend
-
-Multi-Disciplinary Capstone Project Collaboration Platform.
-Built with Spring Boot 3, PostgreSQL (Supabase), and deployed on Hugging Face Spaces.
-EOF
+          printf '%s\n' \
+            '---' \
+            'title: CapstoneHub Backend' \
+            'emoji: 🎓' \
+            'colorFrom: blue' \
+            'colorTo: indigo' \
+            'sdk: docker' \
+            'pinned: false' \
+            '---' \
+            '' \
+            '# CapstoneHub — Java Spring Boot Backend' \
+            '' \
+            'Multi-Disciplinary Capstone Project Collaboration Platform.' \
+            > README.md
 
           git add README.md
           git commit -m "Deploy: Java backend to HF Space (clean snapshot)"
