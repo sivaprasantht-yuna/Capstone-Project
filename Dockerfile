@@ -1,35 +1,27 @@
-# ─── Stage 1: Build with Maven (Backend) ───────────────────────────────────────
-FROM maven:3.9-eclipse-temurin-21 AS backend-builder
-WORKDIR /app
+# ==========================================
+# STAGE 1: Build the Java Spring Boot JAR
+# ==========================================
+FROM maven:3.9.6-eclipse-temurin-21 AS build
+WORKDIR /backend-build
+
+# Copy only the backend folder
 COPY backend/pom.xml .
-RUN mvn dependency:go-offline -q
 COPY backend/src ./src
-RUN mvn package -DskipTests -q
 
-# ─── Stage 2: Final Image (Python + Java + Supervisor) ─────────────────────────
-FROM python:3.11-slim
+# Compile the JAR
+RUN mvn clean package -DskipTests
 
-# Install Java and Supervisor
-RUN apt-get update && apt-get install -y \
-    openjdk-21-jre-headless \
-    supervisor \
-    && rm -rf /var/lib/apt/lists/*
-
+# ==========================================
+# STAGE 2: Final Production Container
+# ==========================================
+FROM eclipse-temurin:21-jre-jammy
 WORKDIR /app
 
-# Setup Python Matching Service
-COPY matching-service/requirements.txt ./matching-service/
-RUN pip install --no-cache-dir -r matching-service/requirements.txt
-COPY matching-service/ ./matching-service/
+# Copy the compiled JAR from Stage 1
+COPY --from=build /backend-build/target/*.jar ./app.jar
 
-# Copy Backend JAR
-COPY --from=backend-builder /app/target/*.jar ./app.jar
+# Expose the mandatory Hugging Face port
+EXPOSE 7860
 
-# Copy Supervisor configuration
-COPY docker/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
-
-# Expose port for Render (8080)
-EXPOSE 8080
-
-# Run supervisor
-CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]
+# Boot the Java application
+ENTRYPOINT ["java", "-Dserver.port=7860", "-jar", "app.jar"]

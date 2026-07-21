@@ -1,0 +1,35 @@
+name: Sync Backend to Hugging Face Space
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'backend/**'
+      - 'Dockerfile'
+  workflow_dispatch: # Allow manual trigger
+
+jobs:
+  sync-to-hf:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout GitHub Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # Full history needed for a clean push
+
+      - name: Push to Hugging Face Space
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          # Configure Git identity
+          git config --global user.email "ci-bot@github-actions.com"
+          git config --global user.name "GitHub Actions Bot"
+
+          # Add the HF Space as a remote
+          git remote add hf https://TGAshwinYT:$HF_TOKEN@huggingface.co/spaces/TGAshwinYT/Paatu_Padava
+
+          # Force-push the current main branch to the HF Space
+          # This replaces whatever was in the Space with the Java backend
+          git push hf main:main --force

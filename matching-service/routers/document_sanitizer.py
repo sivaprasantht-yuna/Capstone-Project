@@ -1,6 +1,6 @@
-from fastapi import APIRouter, UploadFile, File, HTTPException
+from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel
 from huggingface_hub import InferenceClient
-import fitz  # This is PyMuPDF
 import os
 
 router = APIRouter(prefix="/api/v1/sanitizer", tags=["Document Sanitizer"])
@@ -10,22 +10,27 @@ HF_TOKEN = os.getenv("HF_TOKEN")
 # Using the highly optimized instruction-tuned Llama 3 model
 client = InferenceClient(model="meta-llama/Meta-Llama-3-8B-Instruct", token=HF_TOKEN)
 
-@router.post("/process-pdf")
-async def process_project_pdf(file: UploadFile = File(...)):
-    # 1. Ensure it's a PDF
-    if not file.filename.endswith('.pdf'):
-        raise HTTPException(status_code=400, detail="Invalid file type. Please upload a PDF.")
-    
-    try:
-        # 2. Extract Text instantly using PyMuPDF (Takes less than 5MB RAM)
-        pdf_bytes = await file.read()
-        doc = fitz.open(stream=pdf_bytes, filetype="pdf")
-        raw_text = "".join([page.get_text() for page in doc])
-        
-        if not raw_text.strip():
-            raise HTTPException(status_code=400, detail="The PDF appears to be empty or contains only scanned images.")
 
-        # 3. Create the strict extraction prompt
+class TextPayload(BaseModel):
+    """Raw text extracted from a PDF by the Java backend (Apache PDFBox)."""
+    raw_text: str
+
+
+@router.post("/process-text")
+async def process_project_text(payload: TextPayload):
+    """
+    Accept pre-extracted plain text (a few KB) instead of a raw PDF binary.
+    Java strips the PDF locally with PDFBox and sends only this lean payload,
+    avoiding Vercel's function size limits entirely.
+    """
+    if not payload.raw_text.strip():
+        raise HTTPException(
+            status_code=400,
+            detail="Received empty text. The PDF may contain only scanned images."
+        )
+
+    try:
+        # Build the strict extraction prompt
         system_prompt = (
             "You are an academic document compiler. Your job is to extract exactly two sections from the project text:\n"
             "1. PROJECT OVERVIEW: A high-level absolute summary of what the project does.\n"
@@ -40,16 +45,16 @@ async def process_project_pdf(file: UploadFile = File(...)):
 
         messages = [
             {"role": "system", "content": system_prompt},
-            {"role": "user", "content": f"Here is the project documentation:\n\n{raw_text[:7000]}"} # Limits tokens to fit free tier caps
+            # Limit to 7 000 chars to stay within free-tier token caps
+            {"role": "user", "content": f"Here is the project documentation:\n\n{payload.raw_text[:7000]}"},
         ]
 
-        # 4. Request the free Hugging Face API server to handle the AI logic
         response = client.chat_completion(
             messages=messages,
             max_tokens=1200,
-            temperature=0.1
+            temperature=0.1,
         )
-        
+
         cleaned_markdown = response.choices[0].message.content
         return {"cleaned_document": cleaned_markdown}
 

@@ -1,8 +1,8 @@
-name: Keep Render Backend Awake
+name: Keep Hugging Face Backend Awake
 
 on:
   schedule:
-    # Ping every 14 minutes to prevent Render free tier from sleeping (sleeps after 15 mins)
+    # Ping every 14 minutes to prevent HF Space from sleeping after inactivity
     - cron: '*/14 * * * *'
   workflow_dispatch:
 
@@ -10,8 +10,8 @@ jobs:
   keep-alive:
     runs-on: ubuntu-latest
     steps:
-      - name: Ping Render Backend
+      - name: Ping HF Space Backend
         run: |
-          echo "Pinging Render Backend to keep it awake..."
-          # Ping the Spring Boot actuator health endpoint
-          curl -s -f --max-time 30 "https://capstonehub-backend.onrender.com/actuator/health" || echo "Ping returned an error, but the space should be awake now."
+          echo "Pinging Hugging Face Space Backend to keep it awake..."
+          # Ping the Spring Boot actuator health endpoint on HF Space
+          curl -s -f --max-time 30 "https://tgashwinyt-paatu-padava.hf.space/actuator/health" || echo "Ping returned an error, but the space should be awake now."

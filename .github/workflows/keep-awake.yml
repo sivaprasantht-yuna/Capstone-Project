@@ -1,8 +1,8 @@
-name: Keep Render Awake
+name: Keep Hugging Face Awake
 
 on:
   schedule:
-    # Runs every 14 minutes to prevent Render's 15-minute inactivity sleep
+    # Runs every 14 minutes to prevent HF Space from sleeping after inactivity
     - cron: '*/14 * * * *'
   workflow_dispatch: # Allows manual trigger
 
@@ -10,6 +10,6 @@ jobs:
   ping:
     runs-on: ubuntu-latest
     steps:
-      - name: Ping Backend
+      - name: Ping HF Space Backend
         run: |
-          curl -sSf https://capstonehub-backend.onrender.com/ || echo "Ping failed, but workflow continues"
+          curl -sSf https://tgashwinyt-paatu-padava.hf.space/ || echo "Ping failed, but workflow continues"
