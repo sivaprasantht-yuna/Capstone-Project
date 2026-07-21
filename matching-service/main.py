@@ -29,7 +29,11 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:8080"],   # Spring Boot only
+    allow_origins=[
+        "http://localhost:8080",                          # local dev
+        "http://localhost:8081",                          # local dev alt port
+        "https://tgashwinyt-paatu-padava.hf.space",      # HF Space Java backend
+    ],
     allow_methods=["POST", "GET"],
     allow_headers=["*"],
 )
