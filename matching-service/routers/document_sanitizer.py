@@ -1,14 +1,18 @@
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
-from huggingface_hub import InferenceClient
+from openai import OpenAI
 import os
 
 router = APIRouter(prefix="/api/v1/sanitizer", tags=["Document Sanitizer"])
 
-# Fetch token from environment variables
-HF_TOKEN = os.getenv("HF_TOKEN")
-# Using the highly optimized instruction-tuned Llama 3 model
-client = InferenceClient(model="meta-llama/Meta-Llama-3-8B-Instruct", token=HF_TOKEN)
+# NVIDIA NIM API key — set as NVIDIA_API_KEY in Vercel environment variables
+NVIDIA_API_KEY = os.getenv("NVIDIA_API_KEY")
+
+# NVIDIA NIM uses an OpenAI-compatible endpoint
+client = OpenAI(
+    base_url="https://integrate.api.nvidia.com/v1",
+    api_key=NVIDIA_API_KEY,
+)
 
 
 class TextPayload(BaseModel):
@@ -49,7 +53,8 @@ async def process_project_text(payload: TextPayload):
             {"role": "user", "content": f"Here is the project documentation:\n\n{payload.raw_text[:7000]}"},
         ]
 
-        response = client.chat_completion(
+        response = client.chat.completions.create(
+            model="meta/llama-3.1-8b-instruct",
             messages=messages,
             max_tokens=1200,
             temperature=0.1,
