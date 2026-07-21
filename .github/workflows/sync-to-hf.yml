@@ -17,7 +17,7 @@ jobs:
       - name: Checkout GitHub Repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0   # Full history needed for a clean push
+          fetch-depth: 1   # Shallow clone — we'll create a fresh orphan anyway
 
       - name: Push to Hugging Face Space
         env:
@@ -27,16 +27,19 @@ jobs:
           git config --global user.email "ci-bot@github-actions.com"
           git config --global user.name "GitHub Actions Bot"
 
-          # Store credentials safely (avoids URL parsing issues with token characters)
+          # Store credentials safely
           git config --global credential.helper store
           echo "https://TGAshwinYT:${HF_TOKEN}@huggingface.co" > ~/.git-credentials
 
-          # Remove compiled JAR from git index — HF rejects files >10 MB.
-          # HF will compile the JAR itself using the Dockerfile.
-          git rm -r --cached backend/target/ 2>/dev/null || true
-          git commit --allow-empty -m "ci: strip build artifacts before HF push"
+          # Delete compiled artifacts so they are never part of the push
+          rm -rf backend/target/
 
-          # Add HF Space as remote and force-push
+          # Create a fresh orphan commit — no git history means no old JAR files.
+          # HuggingFace only needs the source + Dockerfile, not the history.
+          git checkout --orphan hf-deploy
+          git add .
+          git commit -m "Deploy: Java backend to HF Space (clean snapshot)"
+
+          # Add HF Space remote and force-push the clean snapshot
           git remote add hf https://huggingface.co/spaces/TGAshwinYT/Paatu_Padava
-          git push hf main:main --force
-
+          git push hf hf-deploy:main --force
