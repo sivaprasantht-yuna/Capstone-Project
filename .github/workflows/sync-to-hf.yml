@@ -38,6 +38,25 @@ jobs:
           # HuggingFace only needs the source + Dockerfile, not the history.
           git checkout --orphan hf-deploy
           git add .
+
+          # Generate the HF Space README with required YAML metadata (fixes repo card warning)
+          cat > README.md << 'EOF'
+---
+title: CapstoneHub Backend
+emoji: 🎓
+colorFrom: blue
+colorTo: indigo
+sdk: docker
+pinned: false
+---
+
+# CapstoneHub — Java Spring Boot Backend
+
+Multi-Disciplinary Capstone Project Collaboration Platform.
+Built with Spring Boot 3, PostgreSQL (Supabase), and deployed on Hugging Face Spaces.
+EOF
+
+          git add README.md
           git commit -m "Deploy: Java backend to HF Space (clean snapshot)"
 
           # Add HF Space remote and force-push the clean snapshot
