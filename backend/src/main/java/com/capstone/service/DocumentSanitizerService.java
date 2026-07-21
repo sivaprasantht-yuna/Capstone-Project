@@ -20,7 +20,7 @@ import java.util.Map;
 public class DocumentSanitizerService {
 
     // Defaults to Vercel-deployed Python service; override via MATCHING_SERVICE_URL env var
-    @Value("${matching.service.url:https://capstone-matching.vercel.app}")
+    @Value("${matching.service.url:https://capstone-project-n9rd-euqp395jy-team-algorythms.vercel.app}")
     private String pythonServiceUrl;
 
     private final RestTemplate restTemplate = new RestTemplate();

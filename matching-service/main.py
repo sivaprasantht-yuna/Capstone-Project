@@ -33,6 +33,7 @@ app.add_middleware(
         "http://localhost:8080",                          # local dev
         "http://localhost:8081",                          # local dev alt port
         "https://tgashwinyt-paatu-padava.hf.space",      # HF Space Java backend
+        "https://capstone-project-n9rd-euqp395jy-team-algorythms.vercel.app",  # self
     ],
     allow_methods=["POST", "GET"],
     allow_headers=["*"],
