@@ -31,6 +31,12 @@ jobs:
           git config --global credential.helper store
           echo "https://TGAshwinYT:${HF_TOKEN}@huggingface.co" > ~/.git-credentials
 
+          # Remove compiled JAR from git index — HF rejects files >10 MB.
+          # HF will compile the JAR itself using the Dockerfile.
+          git rm -r --cached backend/target/ 2>/dev/null || true
+          git commit --allow-empty -m "ci: strip build artifacts before HF push"
+
           # Add HF Space as remote and force-push
           git remote add hf https://huggingface.co/spaces/TGAshwinYT/Paatu_Padava
           git push hf main:main --force
+
