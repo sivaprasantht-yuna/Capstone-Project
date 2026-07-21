@@ -6,6 +6,8 @@ WORKDIR /backend-build
 
 # Copy only the backend folder
 COPY backend/pom.xml .
+# Pre-download all Maven dependencies as a separate cached layer
+RUN mvn dependency:go-offline -q
 COPY backend/src ./src
 
 # Compile the JAR

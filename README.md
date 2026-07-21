@@ -9,11 +9,14 @@
 [![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.3.2-brightgreen?logo=springboot)](https://spring.io/projects/spring-boot)
 [![React](https://img.shields.io/badge/React-18-blue?logo=react)](https://react.dev/)
 [![Python](https://img.shields.io/badge/Python-3.11-yellow?logo=python)](https://python.org)
-[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-blue?logo=postgresql)](https://postgresql.org)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Supabase-3ECF8E?logo=supabase)](https://supabase.com)
+[![HF Spaces](https://img.shields.io/badge/Java%20Backend-HF%20Spaces-orange?logo=huggingface)](https://huggingface.co/spaces)
+[![Vercel](https://img.shields.io/badge/Python%20%26%20Frontend-Vercel-black?logo=vercel)](https://vercel.com)
+[![NVIDIA NIM](https://img.shields.io/badge/AI-NVIDIA%20NIM-76B900?logo=nvidia)](https://build.nvidia.com)
 [![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
 
 > **S5 Mini Project — Production-Grade Implementation**  
-> React + Spring Boot 3 + Python FastAPI + PostgreSQL + Redis + WebSocket
+> React (Vercel) + Spring Boot (Hugging Face Spaces) + Python FastAPI (Vercel) + Supabase + NVIDIA NIM
 
 </div>
 
@@ -22,15 +25,15 @@
 ## 📋 Table of Contents
 
 - [What is CapstoneHub?](#-what-is-capstonehub)
-- [Why This Stack?](#-why-this-stack)
 - [Architecture](#️-architecture)
+- [Why This Stack?](#-why-this-stack)
 - [Design Patterns](#-design-patterns-implemented)
 - [DSA Implementations](#-data-structures--algorithms)
 - [Features](#-features)
 - [Project Structure](#-project-structure)
 - [Quick Start](#-quick-start-development)
 - [Database Setup](#-database-setup)
-- [College Deployment Guide](#-deploying-for-your-college)
+- [Cloud Deployment](#-cloud-deployment)
 - [Demo Credentials](#-demo-credentials)
 - [API Reference](#-api-documentation)
 - [Matching Algorithms](#-matching-algorithm-details)
@@ -49,6 +52,7 @@ CapstoneHub eliminates the manual, chaotic process of capstone project formation
 | 🤝 **AI Teammate Matching** | Cosine similarity on skill vectors finds students who complement your gaps |
 | 🎓 **AI Mentor Matching** | Expertise overlap + workload penalty for fair mentor allocation |
 | 🔍 **Idea Plagiarism Check** | TF-IDF similarity flags duplicate project ideas before approval |
+| 📄 **AI Document Sanitizer** | PDFBox extracts text → NVIDIA NIM (Llama 3) generates a clean project overview |
 | 💬 **Real-time Team Chat** | STOMP WebSocket powered team messaging |
 | 🔔 **Real-time Notifications** | Push notifications via STOMP user-specific queues |
 | 📋 **Project Lifecycle** | 3-phase milestone system with file submissions (Cloudinary CDN) |
@@ -56,78 +60,77 @@ CapstoneHub eliminates the manual, chaotic process of capstone project formation
 | ⚠️ **At-Risk Detection** | Nightly cron flags inactive teams and notifies mentor |
 | 📄 **PDF Certificates** | iText 8 auto-generated completion certificates with QR verification |
 | 👥 **4 Role Portals** | Student / Faculty / Admin / Industry Partner |
-| 🐳 **Full Docker Stack** | One-command deployment with all services |
-
----
-
-## 🤔 Why This Stack?
-
-This project uses **three different languages** intentionally — each chosen for where it excels:
-
-### ☕ Java + Spring Boot (Core Backend)
-| Reason | Detail |
-|---|---|
-| **Strong typing** | Perfect for modelling complex entities: `User`, `Team`, `Mentorship`, `Milestone` |
-| **Spring Security + JWT** | Role-based auth (`STUDENT`, `FACULTY`, `ADMIN`, `INDUSTRY`) |
-| **Spring Data JPA** | Maps Java classes to PostgreSQL tables — no raw SQL for CRUD |
-| **Spring WebSocket (STOMP)** | Powers real-time chat and notifications |
-| **Design Pattern support** | Builder, Facade, Observer patterns are natural in OOP |
-
-### 🐍 Python + FastAPI (AI Matching Microservice)
-| Reason | Detail |
-|---|---|
-| **ML ecosystem** | `scikit-learn`, `numpy`, `sentence-transformers` — no Java equivalent |
-| **Faster prototyping** | ML algorithms are 5× faster to write in Python |
-| **Microservice isolation** | Runs on port 8000; Spring Boot calls it via HTTP proxy |
-| **DSA showcase** | Contains its own `min_heap.py`, `skill_graph.py`, `merge_sort.py` |
-
-### ⚛️ React + TypeScript (Frontend)
-| Reason | Detail |
-|---|---|
-| **Component model** | Reusable UI blocks across 4 role-based portals |
-| **Type safety** | TypeScript mirrors Java's strong-typing philosophy |
-| **Vite** | Sub-second hot reload for fast development |
-
-```
-React Frontend  →  Spring Boot (port 8081)  →  Python FastAPI (port 8000)
-                          ↕                            ↕
-                   PostgreSQL (Supabase)         AI/ML matching logic
-                          ↕
-                     Redis Cache (1hr TTL)
-```
 
 ---
 
 ## 🏗️ Architecture
 
 ```
-┌──────────────────────────────────────────────────────────────────────┐
-│                           BROWSER                                    │
-│      React 18 · Vite · TypeScript · Redux · Recharts                │
-└─────────────────────────┬────────────────────────┬───────────────────┘
-                          │ REST /api/v1            │ WebSocket /ws
-                   ┌──────▼─────────────────────────────────────────┐
-                   │         SPRING BOOT 3.3 (Port 8081)            │
-                   │  Spring Security 6 · JWT · JPA · STOMP         │
-                   │  Controllers · Services · Repositories          │
-                   └──────┬─────────────────────┬────────────────────┘
-                          │ JPA/JDBC             │ HTTP REST
-                   ┌──────▼──────┐     ┌────────▼──────────────────┐
-                   │ PostgreSQL   │     │  Python FastAPI (Port 8000)│
-                   │ (Supabase)  │     │  scikit-learn · TF-IDF    │
-                   └──────┬──────┘     │  Min-Heap · Skill Graph   │
-                          │            └───────────────────────────-─┘
-                   ┌──────▼──────┐
-                   │    Redis    │  ← Match result caching (1hr TTL)
-                   │ (Port 6379) │
-                   └─────────────┘
+┌────────────────────────────────────────────────────────────────────┐
+│                         BROWSER                                    │
+│   React 18 · Vite · TypeScript · Redux · Recharts                 │
+│                     [Vercel]                                       │
+└──────────────────────┬─────────────────────┬──────────────────────┘
+                       │ REST /api/v1         │ WebSocket /ws
+              ┌────────▼──────────────────────────────────┐
+              │     SPRING BOOT 3.3 — Java 21             │
+              │  Spring Security · JWT · JPA · STOMP       │
+              │          [Hugging Face Spaces]             │
+              └────────┬──────────────────┬───────────────┘
+                       │ JPA/JDBC         │ HTTP JSON (text only)
+              ┌────────▼────────┐  ┌──────▼──────────────────────┐
+              │  PostgreSQL      │  │  Python FastAPI             │
+              │  (Supabase)     │  │  scikit-learn · NVIDIA NIM  │
+              └────────┬────────┘  │  [Vercel Serverless]        │
+                       │           └─────────────────────────────┘
+              ┌────────▼────────┐
+              │   Cloudinary    │  ← File & PDF uploads (CDN)
+              └─────────────────┘
 ```
+
+### How PDF AI Processing Works
+
+```
+User uploads PDF  →  Java (PDFBox extracts text, ~5KB)
+                  →  Vercel Python receives tiny JSON text payload
+                  →  NVIDIA NIM (Llama 3.1) generates clean Markdown
+                  →  Returns "## Project Overview" + "## Problem Statement"
+```
+
+> **Why this split?** Java does the heavy PDF lifting locally (no network cost), then sends only kilobytes of text to Vercel — avoiding Vercel's 4.5MB body limit entirely.
+
+---
+
+## 🤔 Why This Stack?
+
+### ☕ Java + Spring Boot (Core Backend — HF Spaces)
+| Reason | Detail |
+|---|---|
+| **Strong typing** | Perfect for modelling complex entities: `User`, `Team`, `Mentorship`, `Milestone` |
+| **Spring Security + JWT** | Role-based auth (`STUDENT`, `FACULTY`, `ADMIN`, `INDUSTRY`) |
+| **Spring Data JPA** | Maps Java classes to PostgreSQL tables — no raw SQL for CRUD |
+| **Spring WebSocket (STOMP)** | Powers real-time chat and notifications |
+| **Apache PDFBox 3** | Strips raw text from uploaded PDFs locally — no network overhead |
+| **iText 8** | Generates QR-verified completion certificates as PDF |
+
+### 🐍 Python + FastAPI (AI Matching Service — Vercel)
+| Reason | Detail |
+|---|---|
+| **ML ecosystem** | `scikit-learn`, `numpy` — no Java equivalent |
+| **NVIDIA NIM API** | Calls `meta/llama-3.1-8b-instruct` via OpenAI-compatible endpoint |
+| **Serverless fit** | Stateless AI endpoints map perfectly to Vercel functions |
+| **DSA showcase** | Contains `min_heap.py`, `skill_graph.py`, `merge_sort.py` |
+
+### ⚛️ React + TypeScript (Frontend — Vercel)
+| Reason | Detail |
+|---|---|
+| **Component model** | Reusable UI blocks across 4 role-based portals |
+| **Type safety** | TypeScript mirrors Java's strong-typing philosophy |
+| **Vite** | Sub-second hot reload for fast development |
 
 ---
 
 ## 🎨 Design Patterns Implemented
-
-This project demonstrates all three GoF design pattern categories as part of the S5 Mini Project requirement:
 
 ### 1. 🏗️ Creational — Builder Pattern
 **Problem:** `NotificationService.sendNotification()` accepted 5 positional parameters, making call-sites fragile.
@@ -135,9 +138,6 @@ This project demonstrates all three GoF design pattern categories as part of the
 **Solution:** A fluent `NotificationRequest` builder replaces all raw calls.
 
 ```java
-// Before (fragile — easy to swap arguments accidentally)
-notificationService.sendNotification(userId, message, type, refId, refType);
-
 // After (readable, self-documenting, validated)
 notificationService.send(
     NotificationRequest.to(userId)
@@ -153,13 +153,12 @@ notificationService.send(
 ---
 
 ### 2. 🏛️ Structural — Facade Pattern
-**Problem:** `MatchingController` was reaching into `TeamMemberRepository` and `ProjectRepository` directly — leaking repository logic into the controller layer.
+**Problem:** `MatchingController` was reaching into multiple repositories directly — leaking business logic into the controller layer.
 
-**Solution:** `MatchingFacade` provides a single, clean interface. The controller now has **one dependency** instead of three.
+**Solution:** `MatchingFacade` provides a single, clean interface.
 
 ```java
-// Controller (client) — before: 3 dependencies + business logic inside
-// Controller (client) — after: one facade call
+// Controller — one facade call instead of three dependencies
 return ResponseEntity.ok(matchingFacade.findMentorsFor(teamId, topN));
 ```
 
@@ -168,18 +167,16 @@ return ResponseEntity.ok(matchingFacade.findMentorsFor(teamId, topN));
 ---
 
 ### 3. 👁️ Behavioural — Observer Pattern
-**Problem:** Business logic (audit logging, notifications) was hardcoded inline inside `TeamService`, `MentorshipService`, and `MilestoneService` — any new reaction required modifying those classes.
+**Problem:** Audit logging and notifications were hardcoded inside `TeamService`, `MentorshipService`, etc.
 
 **Solution:** Services publish domain events. Independent listeners react without coupling.
 
 ```
 TeamService.createTeam()
     └── eventPublisher.publishEvent(new TeamFormedEvent(...))
-              ├── NotificationEventListener.onTeamFormed() → sends push notification
-              └── AuditEventListener.auditTeamFormed()    → saves audit log
+              ├── NotificationEventListener.onTeamFormed() → push notification
+              └── AuditEventListener.auditTeamFormed()    → audit log
 ```
-
-Adding email alerts in the future = **zero changes to TeamService** — just add a new listener.
 
 **Files:** `com.capstone.events.*`, `com.capstone.events.listener.*`
 
@@ -196,61 +193,48 @@ Adding email alerts in the future = **zero changes to TeamService** — just add
 | **Merge Sort** | Python + Java | `dsa/merge_sort.py`, `MergeSort.java` | Leaderboard ranking | O(N log N) |
 | **Trie (Prefix Tree)** | Java | `dsa/SkillTrie.java` | Skill autocomplete search | O(L) per query |
 
-**Exposed API endpoints for DSA:**
-```
-GET  /graph/info                → skill graph metadata (vertices, edges, components)
-POST /graph/skill-bridges       → BFS-based complementary skill suggestions
-POST /graph/shortest-path       → shortest path between two skills (BFS)
-GET  /graph/components          → skill clusters (Union-Find)
-GET  /api/v1/skills/autocomplete?prefix=py → Trie-powered autocomplete
-```
-
 ---
 
 ## 📁 Project Structure
 
 ```
 CapstoneHub/
-├── backend/                         # Spring Boot 3.3 (Java 21)
+├── backend/                         # Spring Boot 3.3 (Java 21) — HF Spaces
 │   └── src/main/java/com/capstone/
 │       ├── config/                  # Security, WebSocket, Swagger, Cache
-│       ├── controller/              # REST Controllers (10)
+│       ├── controller/              # REST Controllers
 │       ├── dsa/                     # MergeSort.java, SkillTrie.java
 │       ├── events/                  # Domain events (Observer Pattern)
-│       │   ├── TeamFormedEvent.java
-│       │   ├── MentorMatchedEvent.java
-│       │   ├── MilestoneSubmittedEvent.java
-│       │   └── listener/
-│       │       ├── NotificationEventListener.java
-│       │       └── AuditEventListener.java
 │       ├── matching/
 │       │   └── MatchingFacade.java  # Facade Pattern
 │       ├── model/                   # JPA entities (16 tables)
 │       ├── notification/
 │       │   └── NotificationRequest.java  # Builder Pattern
-│       ├── repository/              # Spring Data repos (16)
+│       ├── repository/              # Spring Data repos
 │       ├── security/                # JWT filter + UserDetailsService
-│       ├── service/                 # Business logic (10 services)
+│       ├── service/
+│       │   ├── DocumentSanitizerService.java  # PDFBox text extraction
+│       │   └── ...
 │       └── websocket/               # STOMP ChatController
 │
-├── matching-service/                # Python FastAPI (Port 8000)
+├── matching-service/                # Python FastAPI — Vercel Serverless
 │   ├── main.py
+│   ├── vercel.json                  # Vercel deployment config
 │   ├── routers/
 │   │   ├── teammate_match.py        # Cosine similarity matching
 │   │   ├── mentor_match.py          # Expertise + workload scoring
-│   │   └── idea_similarity.py       # TF-IDF plagiarism check
+│   │   ├── idea_similarity.py       # TF-IDF plagiarism check
+│   │   └── document_sanitizer.py   # NVIDIA NIM text → Markdown
 │   ├── services/cosine_engine.py    # Core ML algorithm
 │   ├── dsa/
 │   │   ├── min_heap.py              # BoundedMaxHeap (Top-K)
 │   │   ├── skill_graph.py           # Graph + BFS + DFS + Union-Find
 │   │   └── merge_sort.py            # Leaderboard sort
-│   ├── tests/                       # pytest unit tests
-│   └── Dockerfile
+│   └── requirements.txt
 │
-├── frontend/                        # React 18 + Vite + TypeScript
+├── frontend/                        # React 18 + Vite + TypeScript — Vercel
 │   └── src/
 │       ├── pages/
-│       │   ├── auth/                # Login, Register (2-step)
 │       │   ├── student/             # Dashboard, Teams, Matching, Milestones
 │       │   ├── faculty/             # Dashboard, Grading, Mentorship
 │       │   ├── admin/               # Analytics, Projects, Users
@@ -261,7 +245,11 @@ CapstoneHub/
 │
 ├── database/
 │   └── seed.sql                     # Demo data for any college
-├── docker-compose.yml               # Full 5-service stack
+├── Dockerfile                       # Java-only multi-stage build for HF Spaces
+├── .github/workflows/
+│   ├── sync-to-hf.yml               # Auto-deploy Java backend to HF Spaces
+│   ├── keep-alive.yml               # Ping HF Space every 14 min
+│   └── keep-awake.yml               # Backup keep-alive ping
 └── .env.example                     # Environment variable template
 ```
 
@@ -271,15 +259,15 @@ CapstoneHub/
 
 ### Prerequisites
 ```
-Java 21+    Maven 3.9+    Node.js 20+    Python 3.11+    Docker Desktop
+Java 21+    Maven 3.9+    Node.js 20+    Python 3.11+
 ```
 
 ### Step 1 — Clone & Configure
 ```bash
-git clone https://github.com/your-org/capstonehub.git
-cd capstonehub
+git clone https://github.com/sivaprasantht-yuna/Capstone-Project.git
+cd Capstone-Project
 cp .env.example .env
-# Edit .env with your Supabase/PostgreSQL credentials
+# Edit .env with your Supabase credentials
 ```
 
 ### Step 2 — Start the Backend
@@ -311,15 +299,15 @@ npm run dev
 
 ## 🗄️ Database Setup
 
-CapstoneHub uses **Hibernate auto-DDL** — tables are created automatically when Spring Boot starts. You only need to seed the demo data.
+CapstoneHub uses **Hibernate auto-DDL** — tables are created automatically when Spring Boot starts. You only need to seed demo data.
 
-### Option A — Supabase (Recommended for Cloud)
+### Supabase (Recommended)
 1. Create a project at [supabase.com](https://supabase.com)
-2. Copy your connection string into `application.properties`
+2. Copy your **JDBC connection string** into `DB_URL`
 3. Spring Boot creates all tables on first run
 4. Open **Supabase → SQL Editor** and paste `database/seed.sql`
 
-### Option B — Local PostgreSQL
+### Local PostgreSQL
 ```bash
 # Start with Docker
 docker compose up postgres -d
@@ -328,72 +316,53 @@ docker compose up postgres -d
 psql -h localhost -U capstone_user -d capstone_db -f database/seed.sql
 ```
 
-### Option C — Full Docker Stack
-```bash
-docker compose up --build -d
-# All services start automatically including DB seeding
-```
-
 ---
 
-## 🏫 Deploying for Your College
+## ☁️ Cloud Deployment
 
-CapstoneHub is designed as a **multi-tenant production platform**. Any college can deploy it without touching the source code.
+CapstoneHub uses a **three-service serverless architecture**:
 
-### Step 1 — Deploy the Stack
-```bash
-git clone https://github.com/your-org/capstonehub.git
-cd capstonehub
-cp .env.example .env
-# Fill in your college's DB URL, JWT secret, Cloudinary keys
-docker compose up --build -d
-```
+| Service | Platform | What it runs |
+|---|---|---|
+| Java Spring Boot | Hugging Face Spaces (Docker) | Core API, WebSocket, PDF processing |
+| Python FastAPI | Vercel (Serverless) | AI matching, NVIDIA NIM document sanitizer |
+| React Frontend | Vercel (Static) | All 4 role portals |
 
-### Step 2 — Seed Demo Data
-Run `database/seed.sql` in your SQL editor. It uses a neutral `@demo.capstonehub.app` domain.
+### Deploy Java Backend → Hugging Face Spaces
 
-### Step 3 — Migrate Emails to Your College Domain
-After seeding, run this **one SQL command** to switch all demo emails to your real college domain:
+The `sync-to-hf.yml` GitHub Action auto-deploys on every push to `main` that changes `backend/` or `Dockerfile`.
 
-```sql
--- Migrate faculty emails to your college domain
-UPDATE users
-SET email = REPLACE(email, '@demo.capstonehub.app', '@yourcollege.edu')
-WHERE role = 'FACULTY';
+**One-time setup:**
+1. Add `HF_TOKEN` to GitHub → Settings → Secrets (get it from [huggingface.co/settings/tokens](https://huggingface.co/settings/tokens))
+2. Add these secrets in your HF Space → Settings → Variables and secrets:
 
--- Migrate student emails
-UPDATE users
-SET email = REPLACE(email, '@student.demo.capstonehub.app', '@student.yourcollege.edu')
-WHERE role = 'STUDENT';
-```
+| Secret | Value |
+|---|---|
+| `DB_URL` | `jdbc:postgresql://...supabase.co:5432/postgres` |
+| `DB_USERNAME` | `postgres` |
+| `DB_PASSWORD` | Your Supabase DB password |
+| `JWT_SECRET` | Random 32+ char string |
+| `CLOUDINARY_CLOUD_NAME` | From cloudinary.com/console |
+| `CLOUDINARY_API_KEY` | From cloudinary.com/console |
+| `CLOUDINARY_API_SECRET` | From cloudinary.com/console |
+| `MATCHING_SERVICE_URL` | Your Vercel Python URL |
+| `REDIS_URL` | Upstash Redis URL (or skip — cache is disabled) |
 
-#### Examples for Real Colleges:
-```sql
--- For VIT Vellore
-UPDATE users SET email = REPLACE(email, '@demo.capstonehub.app', '@vit.ac.in') WHERE role = 'FACULTY';
+### Deploy Python Service → Vercel
 
--- For SRM Institute
-UPDATE users SET email = REPLACE(email, '@demo.capstonehub.app', '@srmist.edu.in') WHERE role = 'FACULTY';
+1. Go to [vercel.com](https://vercel.com) → Add New Project
+2. Import this repo, set **Root Directory** to `matching-service/`
+3. Add environment variable: `NVIDIA_API_KEY` = `nvapi-xxxxx` (from [build.nvidia.com](https://build.nvidia.com))
+4. Deploy
 
--- For Anna University
-UPDATE users SET email = REPLACE(email, '@demo.capstonehub.app', '@annauniv.edu') WHERE role = 'FACULTY';
+### Deploy Frontend → Vercel
 
--- For PSG College of Technology
-UPDATE users SET email = REPLACE(email, '@demo.capstonehub.app', '@psgtech.ac.in') WHERE role = 'FACULTY';
-```
-
-### Step 4 — Onboard Your Real Faculty
-Once deployed, faculty can:
-- **Self-register** at `/register` using their college email
-- **Be invited** by admin via the Admin Panel → Manage Users
-
-### Step 5 — Customise Departments & Settings
-From the Admin Portal, update:
-- Department names to match your college structure
-- Max team sizes per project
-- Milestone deadlines and evaluation rubrics
-
-> **Zero code changes required** for any of the above steps.
+1. Go to [vercel.com](https://vercel.com) → Add New Project
+2. Import this repo, set **Root Directory** to `frontend/`
+3. Add environment variables:
+   - `VITE_API_URL` = `https://tgashwinyt-paatu-padava.hf.space/api/v1`
+   - `VITE_WS_URL` = `wss://tgashwinyt-paatu-padava.hf.space/ws`
+4. Deploy
 
 ---
 
@@ -406,21 +375,16 @@ From the Admin Portal, update:
 | **Admin** | `admin@capstonehub.app` | `Admin@123` |
 | **Faculty (CSE Head)** | `sasikala.d@demo.capstonehub.app` | `Faculty@123` |
 | **Faculty (AI&DS Head)** | `gomathi.r@demo.capstonehub.app` | `Faculty@123` |
-| **Faculty (ECE Head)** | `prakash.sp@demo.capstonehub.app` | `Faculty@123` |
-| **Faculty (AI&ML Head)** | `bharathi.a@demo.capstonehub.app` | `Faculty@123` |
-| **Faculty (IT Head)** | `naveena.s@demo.capstonehub.app` | `Faculty@123` |
 | **Student (CSE)** | `arjun.selvam@student.demo.capstonehub.app` | `Student@123` |
 | **Student (AI&DS)** | `meena.lakshmi@student.demo.capstonehub.app` | `Student@123` |
-| **Student (ECE)** | `rohith.kumar@student.demo.capstonehub.app` | `Student@123` |
 | **Industry Partner** | `partner@technova.com` | `Faculty@123` |
 
 ---
 
 ## 📖 API Documentation
 
-- **Swagger UI**: `http://localhost:8081/swagger-ui.html`
-- **API Base URL**: `http://localhost:8081/api/v1/`
-- **Python Service Docs**: `http://localhost:8000/docs`
+- **Swagger UI**: `https://tgashwinyt-paatu-padava.hf.space/swagger-ui.html`
+- **Python Service Docs**: `https://your-vercel-url.vercel.app/docs`
 
 ### Key Endpoints
 
@@ -429,10 +393,14 @@ From the Admin Portal, update:
 POST /api/v1/auth/register
 POST /api/v1/auth/login
 
-# AI Matching
+# AI Matching (proxied to Vercel Python)
 GET  /api/v1/matching/teammates?topN=5
 GET  /api/v1/matching/mentors/{teamId}?topN=3
 POST /api/v1/matching/idea-similarity
+
+# Document Sanitizer (PDFBox + NVIDIA NIM)
+POST /api/v1/sanitizer/process-pdf    ← upload PDF here (Java extracts text)
+# Java → sends text → POST /api/v1/sanitizer/process-text (Vercel Python + NVIDIA NIM)
 
 # Team Management
 POST /api/v1/teams
@@ -441,26 +409,18 @@ PUT  /api/v1/teams/{teamId}/invite/respond
 
 # Milestones
 GET  /api/v1/milestones/team/{teamId}
-POST /api/v1/milestones/{id}/submit   (multipart file upload)
+POST /api/v1/milestones/{id}/submit   (multipart PDF/file upload)
 POST /api/v1/milestones/{id}/evaluate
-
-# Mentorship
-POST /api/v1/mentorships/request
-PUT  /api/v1/mentorships/{id}/respond
-
-# Admin
-GET  /api/v1/admin/analytics/overview
-GET  /api/v1/admin/at-risk-teams
-POST /api/v1/projects                 (admin approves projects)
 
 # Certificates
 POST /api/v1/certificates/generate/{teamId}
 GET  /api/v1/certificates/verify/{certNumber}
 
-# DSA Endpoints (Skill Graph)
+# DSA Endpoints
 GET  /graph/info
 POST /graph/skill-bridges
 POST /graph/shortest-path
+GET  /graph/components
 
 # WebSocket (STOMP)
 WS   /ws
@@ -480,9 +440,6 @@ For each candidate student:
 
 Labels:  HIGH (≥ 0.50) · MEDIUM (≥ 0.25) · LOW (< 0.25)
 ```
-Students who **fill your skill gaps** rank higher than students with the same skills as you.
-
----
 
 ### Mentor Matching — Expertise + Workload Penalty
 ```
@@ -491,16 +448,11 @@ load_ratio     = current_teams / max_capacity
 penalty_factor = 1 - (0.4 × load_ratio)    ← max 40% workload penalty
 final_score    = overlap_score × penalty_factor
 ```
-Balances expertise match with mentor **fairness** — busy professors are penalised.
-
----
 
 ### Idea Similarity — TF-IDF Plagiarism Detection
 ```
-corpus       = [all_existing_approved_ideas..., new_submitted_idea]
 tfidf_matrix = TfidfVectorizer(ngram_range=(1,2), sublinear_tf=True).fit_transform(corpus)
 similarity   = cosine_similarity(new_idea_vector, existing_vectors)
-
 Threshold: ≥ 0.65 (65%) → flagged as DUPLICATE
 ```
 
@@ -534,71 +486,29 @@ certificates  (1:1 team, QR-verified)
 
 ## ⚙️ Environment Configuration
 
-Copy `.env.example` to `.env` and fill in your values:
-
 ```env
-# Database (Supabase or local PostgreSQL)
-DB_URL=jdbc:postgresql://your-host:5432/your-database
-DB_USERNAME=your_username
-DB_PASSWORD=your_password
+# ── Database (Supabase) ───────────────────────────────────────────
+DB_URL=jdbc:postgresql://xxx.supabase.co:5432/postgres
+DB_USERNAME=postgres
+DB_PASSWORD=your_supabase_password
 
-# JWT (minimum 32 characters — change this!)
-JWT_SECRET=your_very_long_random_secret_key_here_minimum_32_chars
+# ── JWT ──────────────────────────────────────────────────────────
+JWT_SECRET=your_very_long_random_secret_key_minimum_32_chars
 
-# Cloudinary (for file uploads)
+# ── Cloudinary (file & PDF uploads) ──────────────────────────────
 CLOUDINARY_CLOUD_NAME=your_cloud_name
 CLOUDINARY_API_KEY=your_api_key
 CLOUDINARY_API_SECRET=your_api_secret
 
-# Redis (optional — disables caching if not set)
-REDIS_HOST=localhost
-REDIS_PORT=6379
+# ── Python Matching Service (Vercel URL) ─────────────────────────
+MATCHING_SERVICE_URL=https://your-python-service.vercel.app
+
+# ── Redis (optional — caching disabled by default) ───────────────
+REDIS_URL=redis://your-upstash-url:6379
+
+# ── NVIDIA NIM (set in Vercel Python project, not HF) ────────────
+NVIDIA_API_KEY=nvapi-xxxxxxxxxxxxxxxxxxxx
 ```
-
----
-
-## 🐳 One-Command Production Deploy
-
-```bash
-# 1. Configure your .env file
-cp .env.example .env
-vim .env   # Add your secrets
-
-# 2. Start all 5 services
-docker compose up --build -d
-
-# Services will be available at:
-# Frontend:         http://localhost:3000
-# Backend API:      http://localhost:8081
-# Matching Service: http://localhost:8000
-# Swagger Docs:     http://localhost:8081/swagger-ui.html
-# FastAPI Docs:     http://localhost:8000/docs
-```
-
----
-
-## 🤗 Deploying to Hugging Face Spaces (Docker)
-
-CapstoneHub's backend and matching service can be deployed as a single container on **Hugging Face Spaces**.
-
-1. Create a new **Docker** Space on Hugging Face.
-2. In the Space Settings, add your Supabase connection strings as **Secrets**:
-   - `DB_URL`, `DB_USERNAME`, `DB_PASSWORD`
-   - `JWT_SECRET`
-   - `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`
-3. Push this repository to your Space. The root `Dockerfile` will automatically build the Spring Boot and Python FastAPI applications.
-4. The backend API will be available at `https://your-space-name.hf.space/api/v1`. Point your Vercel frontend to this URL!
-
-### 🤖 Automated GitHub Actions (CI/CD)
-This repository includes two GitHub Actions workflows to automate your Hugging Face deployment:
-1. **Sync to Hugging Face (`sync-to-hf.yml`)**: Automatically deploys future updates to your HF Space when you push to the `main` branch.
-2. **Keep Awake (`keep-alive.yml`)**: Pings your Space every 15 minutes so the free tier doesn't go to sleep.
-
-**Required GitHub Configuration:**
-In your GitHub Repository, go to **Settings > Secrets and variables > Actions**:
-- **Secrets**: Add `HF_TOKEN` (Create a write-access token in your HF account settings).
-- **Variables**: Add `HF_USERNAME` (e.g., `sivaprasanth`) and `HF_SPACE_NAME` (e.g., `capstonehub`).
-- **Variables**: Add `HF_SPACE_URL` (e.g., `https://sivaprasanth-capstonehub.hf.space/api/v1/health` or any valid endpoint) for the keep-alive script.
 
 ---
 
@@ -613,20 +523,9 @@ pytest tests/ -v
 cd backend
 mvn test
 
-# Check backend compile
-mvn compile
+# Verify backend compiles
+mvn compile -q
 ```
-
----
-
-## 🎨 Design System
-
-- **Dark theme** with `indigo-600` primary brand colour
-- **Glassmorphism** cards (`backdrop-blur`, `bg-white/5`)
-- **Framer Motion** animations (fade-in, slide-up, score bar fills)
-- **Recharts** for admin analytics (PieChart, BarChart, LineChart)
-- **Inter** font via Google Fonts
-- Animated skill match progress bars with colour-coded levels
 
 ---
 

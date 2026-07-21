@@ -1,5 +1,6 @@
 package com.capstone.service;
 
+import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.text.PDFTextStripper;
 import org.springframework.beans.factory.annotation.Value;
@@ -29,7 +30,7 @@ public class DocumentSanitizerService {
         // This converts a 15 MB binary into a few KB of plain text — never sending
         // the huge file over the network to Vercel's serverless function.
         String rawText;
-        try (PDDocument doc = PDDocument.load(file.getInputStream())) {
+        try (PDDocument doc = Loader.loadPDF(file.getBytes())) {
             PDFTextStripper stripper = new PDFTextStripper();
             rawText = stripper.getText(doc);
         }
