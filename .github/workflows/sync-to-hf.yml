@@ -27,9 +27,10 @@ jobs:
           git config --global user.email "ci-bot@github-actions.com"
           git config --global user.name "GitHub Actions Bot"
 
-          # Add the HF Space as a remote
-          git remote add hf https://TGAshwinYT:$HF_TOKEN@huggingface.co/spaces/TGAshwinYT/Paatu_Padava
+          # Store credentials safely (avoids URL parsing issues with token characters)
+          git config --global credential.helper store
+          echo "https://TGAshwinYT:${HF_TOKEN}@huggingface.co" > ~/.git-credentials
 
-          # Force-push the current main branch to the HF Space
-          # This replaces whatever was in the Space with the Java backend
+          # Add HF Space as remote and force-push
+          git remote add hf https://huggingface.co/spaces/TGAshwinYT/Paatu_Padava
           git push hf main:main --force
