@@ -33,6 +33,7 @@ public class MilestoneService {
     /** Observer Pattern — publisher that fires domain events to registered listeners */
     private final ApplicationEventPublisher eventPublisher;
 
+    @Transactional(readOnly = true)
     public List<Milestone> getMilestonesForTeam(Long teamId) {
         return milestoneRepository.findByTeamIdOrderBySequenceOrder(teamId);
     }

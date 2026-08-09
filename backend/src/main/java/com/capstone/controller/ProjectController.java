@@ -16,6 +16,9 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import com.capstone.service.DocumentSanitizerService;
 
+import com.capstone.service.CloudinaryService;
+import com.capstone.service.MatchingService;
+
 import java.util.List;
 import java.util.Map;
 
@@ -28,6 +31,8 @@ public class ProjectController {
     private final ProjectRepository projectRepository;
     private final UserRepository userRepository;
     private final DocumentSanitizerService sanitizerService;
+    private final CloudinaryService cloudinaryService;
+    private final MatchingService matchingService;
 
     @GetMapping
     public ResponseEntity<List<Project>> getAllApprovedProjects(
@@ -38,6 +43,14 @@ public class ProjectController {
         if (status != null) return ResponseEntity.ok(
                 projectRepository.findByStatus(Project.ProjectStatus.valueOf(status.toUpperCase())));
         return ResponseEntity.ok(projectRepository.findByOrderByUpvoteCountDesc());
+    }
+
+    @GetMapping("/my")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<List<Project>> getMyProjects(@AuthenticationPrincipal UserDetails userDetails) {
+        User user = userRepository.findByEmail(userDetails.getUsername())
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        return ResponseEntity.ok(projectRepository.findByPostedById(user.getId()));
     }
 
     @GetMapping("/{id}")
@@ -62,6 +75,19 @@ public class ProjectController {
         User poster = userRepository.findByEmail(userDetails.getUsername())
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
+        // Calculate similarity score against existing ideas
+        List<String> existingIdeaTexts = projectRepository.findAll().stream()
+                .map(p -> p.getTitle() + ": " + p.getDescription())
+                .toList();
+
+        Map<String, Object> simResult = matchingService.checkIdeaSimilarity(
+                req.getTitle() + ": " + req.getDescription(), existingIdeaTexts);
+
+        Double maxSim = simResult.get("max_similarity") instanceof Number ?
+                ((Number) simResult.get("max_similarity")).doubleValue() : 0.0;
+        Boolean isDup = simResult.get("is_duplicate") instanceof Boolean ?
+                (Boolean) simResult.get("is_duplicate") : (maxSim > 0.7);
+
         Project project = Project.builder()
                 .title(req.getTitle())
                 .description(req.getDescription())
@@ -71,9 +97,30 @@ public class ProjectController {
                 .postedBy(poster)
                 .status(Project.ProjectStatus.OPEN)
                 .isIndustryProposed(poster.getRole() == User.Role.INDUSTRY)
+                .githubUrl(req.getGithubUrl())
+                .pdfDocumentUrl(req.getPdfDocumentUrl())
+                .projectOverviewDoc(req.getProjectOverviewDoc())
+                .referenceSummary(req.getProjectOverviewDoc())
+                .similarityScore(maxSim)
+                .similarityFlag(isDup)
                 .build();
 
         return ResponseEntity.ok(projectRepository.save(project));
+    }
+
+    @PostMapping("/process-pdf")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<?> processPdfDocument(@RequestParam("file") MultipartFile file) {
+        try {
+            String pdfUrl = cloudinaryService.uploadFile(file, "project-docs");
+            String overviewDoc = sanitizerService.callPythonSanitizer(file);
+            return ResponseEntity.ok(Map.of(
+                    "pdfUrl", pdfUrl,
+                    "projectOverviewDoc", overviewDoc
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(Map.of("error", e.getMessage()));
+        }
     }
 
     @PatchMapping("/{id}")
@@ -111,6 +158,7 @@ public class ProjectController {
             return projectRepository.findById(projectId)
                     .map(project -> {
                         project.setReferenceSummary(cleanedMarkdown);
+                        project.setProjectOverviewDoc(cleanedMarkdown);
                         projectRepository.save(project);
                         return ResponseEntity.ok(Map.of(
                                 "message", "Project converted to reference document successfully",
@@ -131,6 +179,9 @@ public class ProjectController {
         private String domain;
         private String techStack;
         private Integer maxTeamSize;
+        private String githubUrl;
+        private String pdfDocumentUrl;
+        private String projectOverviewDoc;
     }
 
     @Data

@@ -23,11 +23,11 @@ public class Project {
     @Column(nullable = false, columnDefinition = "TEXT")
     private String description;
 
-    @Column(length = 100)
+    @Column(name = "domain", columnDefinition = "TEXT")
     private String domain;    // e.g. "IoT", "ML/AI", "Web", "Embedded Systems"
 
-    @Column(name = "tech_stack", length = 500)
-    private String techStack; // comma-separated
+    @Column(name = "tech_stack", columnDefinition = "TEXT")
+    private String techStack; // comma-separated or JSON
 
     @Column(name = "max_team_size")
     @Builder.Default
@@ -48,6 +48,7 @@ public class Project {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "posted_by", nullable = false)
+    @JsonIgnore
     private User postedBy;
 
     @OneToOne(mappedBy = "project", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
@@ -72,6 +73,15 @@ public class Project {
 
     @Column(name = "reference_summary", columnDefinition = "TEXT")
     private String referenceSummary;
+
+    @Column(name = "github_url")
+    private String githubUrl;
+
+    @Column(name = "pdf_document_url")
+    private String pdfDocumentUrl;
+
+    @Column(name = "project_overview_doc", columnDefinition = "TEXT")
+    private String projectOverviewDoc;
 
     public enum ProjectStatus {
         OPEN,           // posted, awaiting admin approval

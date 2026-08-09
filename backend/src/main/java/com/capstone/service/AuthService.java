@@ -44,9 +44,15 @@ public class AuthService {
         // Create corresponding profile
         switch (user.getRole()) {
             case STUDENT -> {
+                String deptCode = user.getDepartment() != null && user.getDepartment().length() >= 2 ?
+                        user.getDepartment().substring(0, 2).toUpperCase() : "CS";
+                String rollNo = "23" + deptCode + String.format("%03d", user.getId());
+
                 StudentProfile profile = StudentProfile.builder()
                         .user(user)
-                        .yearOfStudy(request.getYearOfStudy())
+                        .rollNumber(rollNo)
+                        .yearOfStudy(request.getYearOfStudy() != null ? request.getYearOfStudy() : 1)
+                        .bio("Passionate student eager to collaborate on innovative engineering capstone projects.")
                         .build();
                 studentProfileRepository.save(profile);
             }

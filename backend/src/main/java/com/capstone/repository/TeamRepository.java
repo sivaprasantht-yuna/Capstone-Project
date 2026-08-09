@@ -3,6 +3,7 @@ package com.capstone.repository;
 import com.capstone.model.Team;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
@@ -16,8 +17,19 @@ public interface TeamRepository extends JpaRepository<Team, Long> {
 
     List<Team> findByStatus(Team.TeamStatus status);
 
-    @Query("SELECT t FROM Team t JOIN t.members m WHERE m.user.id = :userId AND m.inviteStatus = 'ACCEPTED'")
-    List<Team> findTeamsByMemberId(Long userId);
+    @Query("SELECT DISTINCT t FROM Team t " +
+           "LEFT JOIN FETCH t.project p " +
+           "LEFT JOIN FETCH t.members m " +
+           "LEFT JOIN FETCH m.user u " +
+           "WHERE t.status = 'FORMING' OR t.status = 'ACTIVE'")
+    List<Team> findAllOpenTeamsWithDetails();
+
+    @Query("SELECT DISTINCT t FROM Team t " +
+           "LEFT JOIN FETCH t.project p " +
+           "LEFT JOIN FETCH t.members m " +
+           "LEFT JOIN FETCH m.user u " +
+           "WHERE t.id IN (SELECT tm.team.id FROM TeamMember tm WHERE tm.user.id = :userId AND tm.inviteStatus = 'ACCEPTED')")
+    List<Team> findTeamsByMemberId(@Param("userId") Long userId);
 
     @Query("SELECT t FROM Team t JOIN t.mentorships ms WHERE ms.faculty.id = :facultyId AND ms.status = 'ACCEPTED'")
     List<Team> findTeamsByMentorId(Long facultyId);

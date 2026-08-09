@@ -1,8 +1,12 @@
+import os
 import urllib.request
 import urllib.error
 import json
 
-url = "https://capstonehub-backend.onrender.com/api/v1/auth/register"
+# Override via BACKEND_URL env var (e.g. export BACKEND_URL=https://your-hf-space.hf.space/api/v1)
+BASE_URL = os.environ.get("BACKEND_URL", "http://localhost:8081/api/v1")
+url = f"{BASE_URL}/auth/register"
+
 data = json.dumps({
     "name": "test",
     "email": "test@test.com",

@@ -59,7 +59,8 @@ api.interceptors.response.use(
       }
 
       try {
-        const res = await axios.post('/api/v1/auth/refresh', null, {
+        const backendUrl = import.meta.env.VITE_API_URL || '/api/v1'
+        const res = await axios.post(`${backendUrl}/auth/refresh`, null, {
           headers: { 'X-Refresh-Token': user.refreshToken },
         })
         const newToken = res.data.accessToken

@@ -35,8 +35,11 @@ public class SecurityConfig {
     private final JwtAuthenticationFilter jwtAuthFilter;
     private final UserDetailsServiceImpl userDetailsService;
 
+    // CORS: accepts a comma-separated list of origins from ALLOWED_ORIGINS env var.
+    // allowedOriginPatterns("*") is safe with credentials (Spring reflects exact request Origin).
+    // For production, set ALLOWED_ORIGINS=https://your-frontend.vercel.app
     @Value("${app.cors.allowed-origins:*}")
-    private String[] allowedOrigins;
+    private String allowedOriginsRaw;
 
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -96,7 +99,11 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOriginPatterns(Arrays.asList(allowedOrigins));
+        // Split comma-separated ALLOWED_ORIGINS env var; allowedOriginPatterns supports "*" with credentials
+        List<String> origins = Arrays.stream(allowedOriginsRaw.split(","))
+                .map(String::trim)
+                .toList();
+        config.setAllowedOriginPatterns(origins);
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of(
             "Authorization",

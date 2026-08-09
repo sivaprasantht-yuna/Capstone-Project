@@ -1,5 +1,6 @@
 package com.capstone.service;
 
+import lombok.RequiredArgsConstructor;
 import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.text.PDFTextStripper;
@@ -17,13 +18,15 @@ import java.util.HashMap;
 import java.util.Map;
 
 @Service
+@RequiredArgsConstructor
 public class DocumentSanitizerService {
 
-    // Defaults to Vercel-deployed Python service; override via MATCHING_SERVICE_URL env var
-    @Value("${matching.service.url:https://capstone-project-n9rd-euqp395jy-team-algorythms.vercel.app}")
+    // Resolved from app.matching-service.base-url → set via MATCHING_SERVICE_URL env var
+    @Value("${app.matching-service.base-url:http://localhost:8000}")
     private String pythonServiceUrl;
 
-    private final RestTemplate restTemplate = new RestTemplate();
+    // Spring-managed RestTemplate bean from AppConfig (respects all bean customizations)
+    private final RestTemplate restTemplate;
 
     public String callPythonSanitizer(MultipartFile file) throws IOException {
         // ── Step 1: Extract raw text from the PDF locally (Apache PDFBox) ─────────

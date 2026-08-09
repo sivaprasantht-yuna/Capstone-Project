@@ -21,6 +21,7 @@ public class Milestone {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "team_id", nullable = false)
+    @JsonIgnore
     private Team team;
 
     @Column(nullable = false, length = 150)
@@ -59,6 +60,7 @@ public class Milestone {
     private List<Submission> submissions = new ArrayList<>();
 
     @OneToOne(mappedBy = "milestone", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @JsonIgnore
     private Evaluation evaluation;
 
     public enum MilestoneStatus {

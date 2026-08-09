@@ -18,6 +18,7 @@ public class TeamMember {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "team_id", nullable = false)
+    @com.fasterxml.jackson.annotation.JsonIgnore
     private Team team;
 
     @ManyToOne(fetch = FetchType.EAGER)

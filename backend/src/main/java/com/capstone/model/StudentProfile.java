@@ -1,5 +1,6 @@
 package com.capstone.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -15,7 +16,11 @@ public class StudentProfile {
     @OneToOne(fetch = FetchType.LAZY)
     @MapsId
     @JoinColumn(name = "user_id")
+    @JsonIgnore
     private User user;
+
+    @Column(name = "roll_number", length = 50)
+    private String rollNumber;
 
     @Column(name = "year_of_study")
     private Integer yearOfStudy;

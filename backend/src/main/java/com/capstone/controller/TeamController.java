@@ -31,7 +31,12 @@ public class TeamController {
 
         User leader = userRepository.findByEmail(userDetails.getUsername())
                 .orElseThrow(() -> new RuntimeException("User not found"));
-        return ResponseEntity.ok(teamService.createTeam(req.getTeamName(), req.getProjectId(), leader.getId()));
+        return ResponseEntity.ok(teamService.createTeamWithProject(req, leader));
+    }
+
+    @GetMapping("/open")
+    public ResponseEntity<List<OpenTeamDto>> getOpenTeams() {
+        return ResponseEntity.ok(teamService.getOpenTeams());
     }
 
     @GetMapping("/my")
@@ -48,6 +53,36 @@ public class TeamController {
         return ResponseEntity.ok(teamService.getTeamById(teamId));
     }
 
+    @GetMapping("/available-students")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<?> getAvailableStudents(@AuthenticationPrincipal UserDetails userDetails) {
+        User user = userRepository.findByEmail(userDetails.getUsername())
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        return ResponseEntity.ok(teamService.getAvailableStudents(user.getId()));
+    }
+
+    @GetMapping("/students/{studentId}/profile")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<?> getStudentProfile(@PathVariable Long studentId) {
+        return ResponseEntity.ok(teamService.getStudentProfile(studentId));
+    }
+
+    @GetMapping("/{teamId}/join-requests")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<?> getJoinRequests(@PathVariable Long teamId) {
+        return ResponseEntity.ok(teamService.getPendingRequests(teamId));
+    }
+
+    @PostMapping("/{teamId}/join-request")
+    @PreAuthorize("hasRole('STUDENT')")
+    public ResponseEntity<?> requestToJoin(
+            @PathVariable Long teamId,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        User user = userRepository.findByEmail(userDetails.getUsername())
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        return ResponseEntity.ok(teamService.requestToJoin(teamId, user.getId()));
+    }
+
     @PostMapping("/{teamId}/invite/{inviteeId}")
     @PreAuthorize("hasRole('STUDENT')")
     public ResponseEntity<TeamMember> inviteMember(
@@ -60,12 +95,26 @@ public class TeamController {
         return ResponseEntity.ok(teamService.inviteMember(teamId, inviteeId, inviter.getId()));
     }
 
+    @PatchMapping("/{teamId}/join-requests/{applicantId}/respond")
+    @PreAuthorize("hasRole('STUDENT')")
+    public ResponseEntity<TeamMember> respondToJoinRequest(
+            @PathVariable Long teamId,
+            @PathVariable Long applicantId,
+            @RequestParam boolean accept) {
+        return ResponseEntity.ok(teamService.respondToJoinRequest(teamId, applicantId, accept));
+    }
+
     @PatchMapping("/{teamId}/invite/respond")
     @PreAuthorize("hasRole('STUDENT')")
     public ResponseEntity<TeamMember> respondToInvite(
             @PathVariable Long teamId,
+            @RequestParam(required = false) Long applicantId,
             @RequestParam boolean accept,
             @AuthenticationPrincipal UserDetails userDetails) {
+
+        if (applicantId != null) {
+            return ResponseEntity.ok(teamService.respondToJoinRequest(teamId, applicantId, accept));
+        }
 
         User user = userRepository.findByEmail(userDetails.getUsername())
                 .orElseThrow(() -> new RuntimeException("User not found"));
@@ -84,8 +133,24 @@ public class TeamController {
     }
 
     @Data
-    static class CreateTeamRequest {
+    public static class CreateTeamRequest {
         private String teamName;
-        private Long projectId;
+        private List<String> domains;
+        private Integer maxTeamSize;
+        private String requiredSkills; // JSON string from frontend
+        private String projectFocus;
+    }
+
+    @Data
+    @lombok.Builder
+    public static class OpenTeamDto {
+        private String id;
+        private String teamName;
+        private String leaderName;
+        private List<String> domains;
+        private List<String> requiredSkills;
+        private Integer currentMemberCount;
+        private Integer maxTeamCount;
+        private String projectFocus;
     }
 }

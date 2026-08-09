@@ -6,6 +6,14 @@ export interface AuthUser {
   email: string
   role: 'STUDENT' | 'FACULTY' | 'ADMIN' | 'INDUSTRY'
   department?: string
+  avatarUrl?: string
+  rollNumber?: string
+  bio?: string
+  domain?: string
+  contactNo?: string
+  linkedinLink?: string
+  githubLink?: string
+  skills?: string[]
   accessToken: string
   refreshToken: string
 }
@@ -32,6 +40,12 @@ const authSlice = createSlice({
       state.isAuthenticated = true
       localStorage.setItem('capstone_auth', JSON.stringify(action.payload))
     },
+    updateUserProfile(state, action: PayloadAction<Partial<AuthUser>>) {
+      if (state.user) {
+        state.user = { ...state.user, ...action.payload }
+        localStorage.setItem('capstone_auth', JSON.stringify(state.user))
+      }
+    },
     logout(state) {
       state.user = null
       state.isAuthenticated = false
@@ -49,5 +63,5 @@ const authSlice = createSlice({
   },
 })
 
-export const { setUser, logout, setLoading, updateAccessToken } = authSlice.actions
+export const { setUser, updateUserProfile, logout, setLoading, updateAccessToken } = authSlice.actions
 export default authSlice.reducer

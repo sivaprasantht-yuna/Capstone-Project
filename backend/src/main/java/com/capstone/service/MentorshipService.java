@@ -140,10 +140,12 @@ public class MentorshipService {
         return mentorshipRepository.save(mentorship);
     }
 
+    @Transactional(readOnly = true)
     public List<Mentorship> getPendingRequestsForFaculty(Long facultyId) {
         return mentorshipRepository.findByFacultyIdAndStatus(facultyId, Mentorship.MentorshipStatus.PENDING);
     }
 
+    @Transactional(readOnly = true)
     public List<Mentorship> getActiveMentorshipsForFaculty(Long facultyId) {
         return mentorshipRepository.findByFacultyIdAndStatus(facultyId, Mentorship.MentorshipStatus.ACCEPTED);
     }

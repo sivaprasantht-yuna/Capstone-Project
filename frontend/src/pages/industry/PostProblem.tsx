@@ -5,6 +5,8 @@ import { Briefcase, Send, Loader2 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import api from '../../lib/api'
 
+import CustomSelect from '../../components/CustomSelect'
+
 const DOMAINS = ['IoT', 'ML/AI', 'Web', 'Embedded Systems', 'Data Science', 'Robotics', 'Blockchain', 'AR/VR', 'Cybersecurity', 'Cloud']
 
 export default function PostProblem() {
@@ -67,26 +69,25 @@ export default function PostProblem() {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="text-white/70 text-sm font-medium block mb-1.5">Domain *</label>
-              <select
+              <CustomSelect
                 value={form.domain}
-                onChange={e => setForm({ ...form, domain: e.target.value })}
+                onChange={val => setForm({ ...form, domain: val })}
+                options={DOMAINS}
+                placeholder="Select domain"
                 required
-                className="input-dark"
-              >
-                <option value="">Select domain</option>
-                {DOMAINS.map(d => <option key={d} value={d}>{d}</option>)}
-              </select>
+                className="w-full"
+              />
             </div>
 
             <div>
               <label className="text-white/70 text-sm font-medium block mb-1.5">Max Team Size</label>
-              <select
+              <CustomSelect
                 value={form.maxTeamSize}
-                onChange={e => setForm({ ...form, maxTeamSize: e.target.value })}
-                className="input-dark"
-              >
-                {[2, 3, 4, 5, 6].map(n => <option key={n} value={n}>{n} members</option>)}
-              </select>
+                onChange={val => setForm({ ...form, maxTeamSize: val })}
+                options={[2, 3, 4, 5, 6].map(n => ({ value: n.toString(), label: `${n} members` }))}
+                placeholder="Select size"
+                className="w-full"
+              />
             </div>
           </div>
 

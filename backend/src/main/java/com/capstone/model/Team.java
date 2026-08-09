@@ -21,7 +21,7 @@ public class Team {
     @Column(name = "team_name", nullable = false, length = 150)
     private String teamName;
 
-    @OneToOne(fetch = FetchType.LAZY)
+    @OneToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "project_id", nullable = false)
     private Project project;
 
@@ -51,10 +51,12 @@ public class Team {
     private List<TeamMember> members = new ArrayList<>();
 
     @OneToMany(mappedBy = "team", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @JsonIgnore
     @Builder.Default
     private List<Mentorship> mentorships = new ArrayList<>();
 
     @OneToMany(mappedBy = "team", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @JsonIgnore
     @Builder.Default
     private List<Milestone> milestones = new ArrayList<>();
 
@@ -69,6 +71,7 @@ public class Team {
     private List<Event> events = new ArrayList<>();
 
     @OneToOne(mappedBy = "team", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @JsonIgnore
     private Certificate certificate;
 
     public enum TeamStatus {

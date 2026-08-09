@@ -20,13 +20,14 @@ import ProtectedRoute from './components/ProtectedRoute'
 export default function App() {
   const { user, isAuthenticated } = useSelector((s: RootState) => s.auth)
 
-  // Connect WebSocket when logged in
+  // Connect WebSocket when logged in (async — does a pre-flight check first)
   useEffect(() => {
     if (isAuthenticated && user) {
-      connectWebSocket(user.userId)
+      connectWebSocket(user.userId)  // fire-and-forget; backoff handled inside
       return () => disconnectWebSocket()
     }
   }, [isAuthenticated, user?.userId])
+
 
   const getPortalForRole = () => {
     switch (user?.role) {

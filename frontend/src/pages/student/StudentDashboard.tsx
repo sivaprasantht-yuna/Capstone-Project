@@ -83,8 +83,8 @@ export default function StudentDashboard() {
 
   const kpis = [
     { label: 'Team Status', value: teams.length > 0 ? teams[0].status : 'No Team', icon: <Users size={20} />, color: 'from-primary-600 to-violet-600', link: '/student/team' },
-    { label: 'Team Points', value: stats.totalPoints ?? '—', icon: <TrendingUp size={20} />, color: 'from-amber-600 to-orange-600', link: '/student/leaderboard' },
-    { label: 'Milestones', value: teams.length > 0 ? '3 Phases' : '—', icon: <CheckCircle2 size={20} />, color: 'from-emerald-600 to-teal-600', link: '/student/workspace' },
+    { label: 'Progress Track', value: '50%', icon: <TrendingUp size={20} />, color: 'from-teal-600 to-emerald-600', link: '/student/progress' },
+    { label: 'Milestones', value: teams.length > 0 ? '3 Phases' : '—', icon: <CheckCircle2 size={20} />, color: 'from-amber-600 to-orange-600', link: '/student/workspace' },
     { label: 'Ideas Posted', value: '—', icon: <Lightbulb size={20} />, color: 'from-pink-600 to-rose-600', link: '/student/ideas' },
   ]
 
@@ -92,11 +92,12 @@ export default function StudentDashboard() {
     <div className="space-y-6 animate-fade-in">
       {/* Welcome header */}
       <div>
-        <h1 className="text-2xl font-bold text-white">
+        <p className="section-subhead mb-1">Student Dashboard</p>
+        <h1 className="text-2xl font-bold text-white" style={{ fontFamily: 'Outfit, sans-serif' }}>
           Good {new Date().getHours() < 12 ? 'morning' : new Date().getHours() < 17 ? 'afternoon' : 'evening'},{' '}
-          <span className="gradient-text">{user?.name?.split(' ')[0]}</span> 👋
+          <span className="gradient-text-primary">{user?.name?.split(' ')[0]}</span> 👋
         </h1>
-        <p className="text-white/50 mt-1 text-sm">Here's what's happening with your capstone project.</p>
+        <p className="text-white/45 mt-1 text-sm">Here's what's happening with your capstone project.</p>
       </div>
 
       {/* KPI Cards */}
@@ -108,14 +109,12 @@ export default function StudentDashboard() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: i * 0.08 }}
           >
-            <Link to={kpi.link} className="glass-card-hover p-5 flex flex-col gap-3 block">
-              <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${kpi.color} flex items-center justify-center text-white`}>
+            <Link to={kpi.link} className="stat-card card-hover block">
+              <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${kpi.color} flex items-center justify-center text-white mb-2`}>
                 {kpi.icon}
               </div>
-              <div>
-                <div className="text-xl font-bold text-white">{kpi.value}</div>
-                <div className="text-xs text-white/50">{kpi.label}</div>
-              </div>
+              <div className="text-xl font-bold text-white" style={{ fontFamily: 'Outfit, sans-serif' }}>{kpi.value}</div>
+              <div className="text-xs text-white/45">{kpi.label}</div>
             </Link>
           </motion.div>
         ))}
@@ -124,10 +123,10 @@ export default function StudentDashboard() {
       {/* Main Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Team Overview */}
-        <div className="glass-card p-6 lg:col-span-2">
+        <div className="card p-6 lg:col-span-2">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="font-semibold text-white">My Team</h2>
-            <Link to="/student/team" className="text-primary-400 hover:text-primary-300 text-sm flex items-center gap-1">
+            <h2 className="font-semibold text-white" style={{ fontFamily: 'Outfit, sans-serif' }}>My Team</h2>
+            <Link to="/student/team" className="text-primary-300 hover:text-primary-200 text-sm flex items-center gap-1">
               View <ArrowRight size={14} />
             </Link>
           </div>
@@ -173,14 +172,14 @@ export default function StudentDashboard() {
         </div>
 
         {/* Quick Actions */}
-        <div className="glass-card p-6">
-          <h2 className="font-semibold text-white mb-4">Quick Actions</h2>
+        <div className="card p-6">
+          <h2 className="font-semibold text-white mb-4" style={{ fontFamily: 'Outfit, sans-serif' }}>Quick Actions</h2>
           <div className="space-y-2">
             {[
               { label: 'Browse Project Ideas', href: '/student/ideas', icon: <Lightbulb size={16} />, color: 'text-amber-400' },
               { label: 'Find Teammates',        href: '/student/team',    icon: <Users size={16} />,     color: 'text-primary-400' },
               { label: 'Request a Mentor',      href: '/student/mentors', icon: <BookOpen size={16} />,  color: 'text-emerald-400' },
-              { label: 'View Leaderboard',      href: '/student/leaderboard', icon: <Award size={16} />, color: 'text-pink-400' },
+              { label: 'Progress Portal',      href: '/student/progress', icon: <TrendingUp size={16} />, color: 'text-teal-400' },
             ].map(action => (
               <Link key={action.href} to={action.href}
                 className="flex items-center gap-3 p-3 rounded-xl hover:bg-white/5 transition-colors group">
@@ -195,9 +194,9 @@ export default function StudentDashboard() {
 
       {/* Senior Reference Document Section */}
       {teams.length > 0 && teams[0].project && (
-        <div className="glass-card p-6 animate-fade-in mt-6">
-          <h2 className="font-semibold text-white mb-4 flex items-center gap-2">
-            <BookOpen size={18} className="text-primary-400" />
+        <div className="card p-6 animate-fade-in mt-6">
+          <h2 className="font-semibold text-white mb-4 flex items-center gap-2" style={{ fontFamily: 'Outfit, sans-serif' }}>
+            <BookOpen size={18} className="text-primary-300" />
             Convert Project to Senior Reference Document
           </h2>
           

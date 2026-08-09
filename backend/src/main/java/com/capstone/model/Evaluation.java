@@ -1,5 +1,6 @@
 package com.capstone.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import io.hypersistence.utils.hibernate.type.json.JsonType;
 import jakarta.persistence.*;
 import lombok.*;
@@ -20,6 +21,7 @@ public class Evaluation {
 
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "milestone_id", nullable = false)
+    @JsonIgnore
     private Milestone milestone;
 
     @ManyToOne(fetch = FetchType.LAZY)

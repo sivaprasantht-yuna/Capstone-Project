@@ -22,6 +22,14 @@ public interface UserRepository extends JpaRepository<User, Long> {
     @Query("SELECT u FROM User u WHERE u.role = 'STUDENT' AND u.id != :excludeId")
     List<User> findAllStudentsExcept(Long excludeId);
 
+    /**
+     * Returns all STUDENT users who are NOT an ACCEPTED member of any team,
+     * excluding the given userId (the current leader).
+     */
+    @Query("SELECT u FROM User u WHERE u.role = 'STUDENT' AND u.id != :excludeId " +
+           "AND u.id NOT IN (SELECT tm.user.id FROM TeamMember tm WHERE tm.inviteStatus = com.capstone.model.TeamMember.InviteStatus.ACCEPTED)")
+    List<User> findStudentsWithoutTeam(Long excludeId);
+
     @Query("SELECT u FROM User u WHERE u.role = 'FACULTY' AND u.isActive = true")
     List<User> findAllActiveFaculty();
 }

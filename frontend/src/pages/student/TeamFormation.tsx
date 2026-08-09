@@ -1,183 +1,189 @@
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { UserCheck, Cpu, Code, Palette, BarChart3, Star, Loader2 } from 'lucide-react'
-import toast from 'react-hot-toast'
-import api from '../../lib/api'
-
-interface MatchResult {
-  user_id: string
-  match_score: number
-  gap_filled_skills: string[]
-  complementarity: 'HIGH' | 'MEDIUM' | 'LOW'
-  name?: string
-  department?: string
-  avatarUrl?: string
-}
+import { useSelector } from 'react-redux'
+import { useNavigate } from 'react-router-dom'
+import { PlusCircle, UserPlus, ArrowRight, Users, Sparkles, ShieldCheck } from 'lucide-react'
+import { RootState } from '../../store'
 
 export default function TeamFormation() {
-  const [matches, setMatches] = useState<MatchResult[]>([])
-  const [loading, setLoading] = useState(false)
-  const [inviting, setInviting] = useState<string | null>(null)
+  const navigate   = useNavigate()
+  const { teamId } = useSelector((s: RootState) => s.team)
 
-  const fetchMatches = async () => {
-    setLoading(true)
-    try {
-      const res = await api.get('/matching/teammates?topN=8')
-      setMatches(res.data)
-    } catch (e) {
-      toast.error('Could not load teammate suggestions.')
-    } finally {
-      setLoading(false)
-    }
-  }
+  // If already in a team, redirect straight to portal
+  useEffect(() => {
+    if (teamId) navigate('/student/team-portal', { replace: true })
+  }, [teamId, navigate])
 
-  useEffect(() => { fetchMatches() }, [])
-
-  const sendInvite = async (userId: string) => {
-    // Requires an existing team — guide user to create one first
-    try {
-      const teamsRes = await api.get('/teams/my')
-      if (teamsRes.data.length === 0) {
-        toast.error('Create a team first before inviting teammates.')
-        return
-      }
-      const teamId = teamsRes.data[0].id
-      setInviting(userId)
-      await api.post(`/teams/${teamId}/invite/${userId}`)
-      toast.success('Invitation sent!')
-    } catch (e: any) {
-      toast.error(e.response?.data?.message || 'Failed to send invite.')
-    } finally {
-      setInviting(null)
-    }
-  }
-
-  const complementarityColors = {
-    HIGH:   'badge-accent',
-    MEDIUM: 'badge-warning',
-    LOW:    'badge-primary',
-  }
-
-  const getSkillIcon = (skill: string) => {
-    const s = skill.toLowerCase()
-    if (s.includes('react') || s.includes('js') || s.includes('web')) return <Code size={12} />
-    if (s.includes('ml') || s.includes('ai') || s.includes('data')) return <Cpu size={12} />
-    if (s.includes('design') || s.includes('ui') || s.includes('figma')) return <Palette size={12} />
-    return <BarChart3 size={12} />
-  }
+  if (teamId) return null
 
   return (
-    <div className="space-y-6 animate-fade-in">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-white flex items-center gap-2">
-            <UserCheck className="text-primary-400" size={24} />
-            Team Formation
-          </h1>
-          <p className="text-white/50 text-sm mt-1">
-            AI-powered teammate suggestions based on <span className="text-primary-400">complementary skills</span> across departments
-          </p>
+    <div className="animate-fade-in max-w-4xl mx-auto pb-12">
+      {/* ── Page Header ──────────────────────────────────────────────── */}
+      <div className="mb-10">
+        <div className="flex items-center gap-3 mb-3">
+          <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-primary-600 to-teal flex items-center justify-center shadow-glow">
+            <Users size={22} className="text-white" />
+          </div>
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-widest text-white/40">
+              Student Portal
+            </p>
+            <h1 className="text-2xl font-bold text-white" style={{ fontFamily: 'Outfit, sans-serif' }}>
+              Team Formation
+            </h1>
+          </div>
         </div>
-        <button onClick={fetchMatches} className="btn-secondary text-sm">
-          Refresh Matches
-        </button>
-      </div>
-
-      {/* Algorithm explanation banner */}
-      <div className="glass-card p-4 border-l-4 border-primary-500">
-        <p className="text-white/70 text-sm">
-          🧠 <span className="text-white font-medium">How it works:</span> Your skill vector is compared against all students 
-          using <strong>cosine similarity</strong>. Students who fill your skill gaps score highest — 
-          ensuring your team covers multiple disciplines.
+        <p className="text-white/50 text-sm max-w-xl">
+          Every great capstone starts with the right team. Choose how you want to participate — lead your own team or join one as a skilled contributor.
         </p>
       </div>
 
-      {loading ? (
-        <div className="flex items-center justify-center py-20">
-          <div className="text-center">
-            <Loader2 className="animate-spin text-primary-400 mx-auto mb-3" size={32} />
-            <p className="text-white/50 text-sm">Running matching algorithm...</p>
-          </div>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-          {matches.map((match, i) => (
-            <motion.div
-              key={match.user_id}
-              initial={{ opacity: 0, y: 16 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.06 }}
-              className="glass-card-hover p-5"
+      {/* ── Two Option Cards ─────────────────────────────────────────── */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+        {/* Create Team Card */}
+        <motion.div
+          initial={{ opacity: 0, y: 24 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.05 }}
+          onClick={() => navigate('/student/team/create')}
+          className="group relative overflow-hidden rounded-3xl cursor-pointer border border-primary-500/20 hover:border-primary-500/60 transition-all duration-300"
+          style={{ background: 'linear-gradient(145deg, rgba(26,95,180,0.12) 0%, rgba(14,61,128,0.22) 100%)' }}
+        >
+          {/* Glow blob */}
+          <div
+            className="absolute -top-8 -right-8 w-40 h-40 rounded-full opacity-20 group-hover:opacity-40 transition-opacity duration-500 pointer-events-none"
+            style={{ background: 'radial-gradient(circle, #1a5fb4, transparent 70%)' }}
+          />
+
+          <div className="relative z-10 p-8">
+            {/* Icon */}
+            <div
+              className="w-14 h-14 rounded-2xl flex items-center justify-center mb-6 shadow-glow group-hover:scale-110 transition-transform duration-300"
+              style={{ background: 'linear-gradient(135deg, #1a5fb4, #0e3d80)' }}
             >
-              {/* Header */}
-              <div className="flex items-start justify-between mb-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary-600 to-violet-600 flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
-                    {match.name?.[0] || 'S'}
-                  </div>
-                  <div>
-                    <div className="font-semibold text-white text-sm">{match.name || `Student #${match.user_id}`}</div>
-                    <div className="text-xs text-white/40">{match.department || 'Unknown Dept.'}</div>
-                  </div>
-                </div>
-                <span className={`badge ${complementarityColors[match.complementarity]}`}>
-                  {match.complementarity}
-                </span>
-              </div>
-
-              {/* Match score bar */}
-              <div className="mb-4">
-                <div className="flex items-center justify-between mb-1.5">
-                  <span className="text-xs text-white/50">Complementarity Score</span>
-                  <span className="text-sm font-bold text-primary-400">
-                    {Math.round(match.match_score * 100)}%
-                  </span>
-                </div>
-                <div className="match-bar">
-                  <motion.div
-                    className="match-bar-fill"
-                    initial={{ width: 0 }}
-                    animate={{ width: `${match.match_score * 100}%` }}
-                    transition={{ delay: i * 0.06 + 0.3, duration: 0.6, ease: 'easeOut' }}
-                  />
-                </div>
-              </div>
-
-              {/* Gap-filling skills */}
-              {match.gap_filled_skills.length > 0 && (
-                <div className="mb-4">
-                  <p className="text-xs text-white/40 mb-2">Fills your skill gaps in:</p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {match.gap_filled_skills.map(skill => (
-                      <span key={skill} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-accent/10 text-emerald-300 text-xs">
-                        {getSkillIcon(skill)} {skill}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Invite button */}
-              <button
-                onClick={() => sendInvite(match.user_id)}
-                disabled={inviting === match.user_id}
-                className="btn-primary w-full text-sm py-2.5 flex items-center justify-center gap-2"
-              >
-                {inviting === match.user_id ? (
-                  <Loader2 size={14} className="animate-spin" />
-                ) : '+ Send Team Invite'}
-              </button>
-            </motion.div>
-          ))}
-
-          {matches.length === 0 && !loading && (
-            <div className="col-span-3 text-center py-16">
-              <Star className="mx-auto text-white/20 mb-3" size={40} />
-              <p className="text-white/40">Complete your skill profile to see teammate suggestions.</p>
+              <PlusCircle size={26} className="text-white" />
             </div>
-          )}
+
+            {/* Title */}
+            <h2 className="text-2xl font-bold text-white mb-2" style={{ fontFamily: 'Outfit, sans-serif' }}>
+              Create Team
+            </h2>
+            <p className="text-white/55 text-sm leading-relaxed mb-6">
+              Start your own capstone team. Define your project domains, set required skills, and invite talented teammates to join your vision.
+            </p>
+
+            {/* Feature list */}
+            <ul className="space-y-2.5 mb-8">
+              {[
+                'You become the Team Leader',
+                'Set team name, domain & skill requirements',
+                'Accept or reject join requests',
+                'Access Team Portal & Mailbox',
+              ].map(f => (
+                <li key={f} className="flex items-start gap-2.5 text-xs text-white/60">
+                  <ShieldCheck size={14} className="text-primary-400 flex-shrink-0 mt-0.5" />
+                  {f}
+                </li>
+              ))}
+            </ul>
+
+            {/* CTA */}
+            <div className="flex items-center gap-2 text-primary-300 font-semibold text-sm group-hover:gap-3 transition-all duration-200">
+              <span>Create Your Team</span>
+              <ArrowRight size={16} className="transition-transform group-hover:translate-x-1" />
+            </div>
+          </div>
+
+          {/* Bottom accent bar */}
+          <div
+            className="absolute bottom-0 left-0 right-0 h-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+            style={{ background: 'linear-gradient(90deg, #1a5fb4, #0ba5a5)' }}
+          />
+        </motion.div>
+
+        {/* Join Team Card */}
+        <motion.div
+          initial={{ opacity: 0, y: 24 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.15 }}
+          onClick={() => navigate('/student/team/join')}
+          className="group relative overflow-hidden rounded-3xl cursor-pointer border border-teal/20 hover:border-teal/60 transition-all duration-300"
+          style={{ background: 'linear-gradient(145deg, rgba(11,165,165,0.10) 0%, rgba(7,120,120,0.20) 100%)' }}
+        >
+          {/* Glow blob */}
+          <div
+            className="absolute -top-8 -right-8 w-40 h-40 rounded-full opacity-20 group-hover:opacity-40 transition-opacity duration-500 pointer-events-none"
+            style={{ background: 'radial-gradient(circle, #0ba5a5, transparent 70%)' }}
+          />
+
+          <div className="relative z-10 p-8">
+            {/* Icon */}
+            <div
+              className="w-14 h-14 rounded-2xl flex items-center justify-center mb-6 shadow-glow group-hover:scale-110 transition-transform duration-300"
+              style={{ background: 'linear-gradient(135deg, #0ba5a5, #077878)' }}
+            >
+              <UserPlus size={26} className="text-white" />
+            </div>
+
+            {/* Title */}
+            <h2 className="text-2xl font-bold text-white mb-2" style={{ fontFamily: 'Outfit, sans-serif' }}>
+              Join Team
+            </h2>
+            <p className="text-white/55 text-sm leading-relaxed mb-6">
+              Browse active teams recruiting skilled members. Share your expertise, send join requests, and become part of a great capstone project.
+            </p>
+
+            {/* Feature list */}
+            <ul className="space-y-2.5 mb-8">
+              {[
+                'Browse open team listings',
+                'Filter by domain & required skills',
+                'Send join requests to teams',
+                'Get accepted by team leader',
+              ].map(f => (
+                <li key={f} className="flex items-start gap-2.5 text-xs text-white/60">
+                  <Sparkles size={14} className="text-teal-300 flex-shrink-0 mt-0.5" />
+                  {f}
+                </li>
+              ))}
+            </ul>
+
+            {/* CTA */}
+            <div className="flex items-center gap-2 text-teal-300 font-semibold text-sm group-hover:gap-3 transition-all duration-200">
+              <span>Browse Open Teams</span>
+              <ArrowRight size={16} className="transition-transform group-hover:translate-x-1" />
+            </div>
+          </div>
+
+          {/* Bottom accent bar */}
+          <div
+            className="absolute bottom-0 left-0 right-0 h-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+            style={{ background: 'linear-gradient(90deg, #0ba5a5, #1a5fb4)' }}
+          />
+        </motion.div>
+      </div>
+
+      {/* ── Info Banner ──────────────────────────────────────────────── */}
+      <motion.div
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, delay: 0.3 }}
+        className="mt-8 p-4 rounded-2xl border border-white/8 flex items-start gap-4"
+        style={{ background: 'rgba(255,255,255,0.03)' }}
+      >
+        <div className="w-9 h-9 rounded-xl bg-amber-500/15 border border-amber-500/20 flex items-center justify-center flex-shrink-0">
+          <ShieldCheck size={16} className="text-amber-400" />
         </div>
-      )}
+        <div>
+          <p className="text-sm font-semibold text-white mb-0.5" style={{ fontFamily: 'Outfit, sans-serif' }}>
+            One team per student
+          </p>
+          <p className="text-xs text-white/45 leading-relaxed">
+            You can only be part of one capstone team at a time. Once you create or join a team, the Team Formation page will be replaced by your personal Team Portal.
+          </p>
+        </div>
+      </motion.div>
     </div>
   )
 }

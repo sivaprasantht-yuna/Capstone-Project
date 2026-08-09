@@ -1,13 +1,14 @@
 <div align="center">
 
-# 🎓 CapstoneHub
+# 🎓 Skill Sync
 
 ### AI-Powered Capstone Project Collaboration Platform
 
 **A production-grade, multi-tenant platform for engineering colleges to manage capstone projects end-to-end — team formation, AI mentor matching, milestone tracking, and grading.**
 
+[![Version](https://img.shields.io/badge/Version-v1.0.0-blue?logo=git)](https://github.com/sivaprasantht-yuna/Capstone-Project)
 [![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.3.2-brightgreen?logo=springboot)](https://spring.io/projects/spring-boot)
-[![React](https://img.shields.io/badge/React-18-blue?logo=react)](https://react.dev/)
+[![React](https://img.shields.io/badge/React-18.3.1-blue?logo=react)](https://react.dev/)
 [![Python](https://img.shields.io/badge/Python-3.11-yellow?logo=python)](https://python.org)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Supabase-3ECF8E?logo=supabase)](https://supabase.com)
 [![HF Spaces](https://img.shields.io/badge/Java%20Backend-HF%20Spaces-orange?logo=huggingface)](https://huggingface.co/spaces)
@@ -15,7 +16,7 @@
 [![NVIDIA NIM](https://img.shields.io/badge/AI-NVIDIA%20NIM-76B900?logo=nvidia)](https://build.nvidia.com)
 [![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
 
-> **S5 Mini Project — Production-Grade Implementation**  
+> **S5 Mini Project — Production-Grade Implementation (v1.0.0)**  
 > React (Vercel) + Spring Boot (Hugging Face Spaces) + Python FastAPI (Vercel) + Supabase + NVIDIA NIM
 
 </div>
@@ -24,7 +25,7 @@
 
 ## 📋 Table of Contents
 
-- [What is CapstoneHub?](#-what-is-capstonehub)
+- [What is Skill Sync?](#-what-is-skill-sync)
 - [Architecture](#️-architecture)
 - [Why This Stack?](#-why-this-stack)
 - [Design Patterns](#-design-patterns-implemented)
@@ -40,12 +41,13 @@
 - [Database Schema](#-database-schema)
 - [Environment Variables](#️-environment-configuration)
 - [Running Tests](#-running-tests)
+- [Version & Release Notes](#-version--release-notes)
 
 ---
 
-## 🏆 What is CapstoneHub?
+## 🏆 What is Skill Sync?
 
-CapstoneHub eliminates the manual, chaotic process of capstone project formation in universities. It is a **multi-tenant SaaS platform** — meaning any college can deploy it and onboard their own faculty, students, and projects with zero code changes.
+Skill Sync eliminates the manual, chaotic process of capstone project formation in universities. It is a **multi-tenant SaaS platform** — meaning any college can deploy it and onboard their own faculty, students, and projects with zero code changes.
 
 | Feature | Description |
 |---|---|
@@ -198,7 +200,7 @@ TeamService.createTeam()
 ## 📁 Project Structure
 
 ```
-CapstoneHub/
+SkillSync/
 ├── backend/                         # Spring Boot 3.3 (Java 21) — HF Spaces
 │   └── src/main/java/com/capstone/
 │       ├── config/                  # Security, WebSocket, Swagger, Cache
@@ -299,7 +301,7 @@ npm run dev
 
 ## 🗄️ Database Setup
 
-CapstoneHub uses **Hibernate auto-DDL** — tables are created automatically when Spring Boot starts. You only need to seed demo data.
+Skill Sync uses **Hibernate auto-DDL** — tables are created automatically when Spring Boot starts. You only need to seed demo data.
 
 ### Supabase (Recommended)
 1. Create a project at [supabase.com](https://supabase.com)
@@ -320,7 +322,7 @@ psql -h localhost -U capstone_user -d capstone_db -f database/seed.sql
 
 ## ☁️ Cloud Deployment
 
-CapstoneHub uses a **three-service serverless architecture**:
+Skill Sync uses a **three-service serverless architecture**:
 
 | Service | Platform | What it runs |
 |---|---|---|
@@ -526,6 +528,33 @@ mvn test
 # Verify backend compiles
 mvn compile -q
 ```
+
+---
+
+## 📌 Version & Release Notes
+
+### Current Version: `v1.0.0` (Initial Production Release)
+
+Skill Sync `v1.0.0` is the initial production-ready version designed for multi-tenant deployment across engineering colleges.
+
+#### Module Version Breakdown
+
+| Service / Module | Package Version | Tech Stack & Core Libraries | Deployment Target |
+|---|---|---|---|
+| **Core Backend** | `v1.0.0` | Java 21 · Spring Boot 3.3.2 · Spring Security (JWT) · STOMP WebSocket · PDFBox 3 · iText 8 | Hugging Face Spaces (Docker) |
+| **Frontend Web App** | `v1.0.0` | React 18.3.1 · Vite 5.3.1 · TypeScript 5.4.5 · Redux Toolkit 2.2.6 · Tailwind CSS 3.4.4 | Vercel (Static Web) |
+| **Matching Microservice** | `v1.0.0` | Python 3.11 · FastAPI 0.111.0 · scikit-learn 1.5.1 · NumPy 1.26.4 · OpenAI SDK 1.35.0 | Vercel (Serverless) |
+| **Database** | — | PostgreSQL 15+ (Supabase) with Hibernate Auto-DDL | Supabase Cloud |
+| **AI LLM Engine** | — | NVIDIA NIM API (`meta/llama-3.1-8b-instruct`) | NVIDIA Build Cloud |
+
+#### Release Highlights (`v1.0.0`)
+- 👥 **Multi-Tenant Role Portals:** Complete portal implementations for 4 distinct user roles: Student, Faculty, Admin, and Industry Partner.
+- 🤝 **AI Skill & Mentor Matching:** Cosine similarity skill-gap algorithm combined with Bounded Max-Heap sorting for complementary student teammate discovery, and workload-penalized mentor matching.
+- 🔍 **TF-IDF Plagiarism Detection:** Real-time n-gram TF-IDF vectorizer flagging duplicate capstone project ideas prior to approval.
+- 📄 **Smart PDF Document Sanitizer:** Offloaded local PDF text extraction via Apache PDFBox coupled with NVIDIA NIM (Llama 3.1) text-to-markdown summarization.
+- 💬 **Real-time Messaging & Notifications:** STOMP protocol WebSockets providing instant team chat feeds and personal notification queues.
+- 📜 **QR-Verified PDF Certificates:** Automated completion certificate generation using iText 8 with verifiable QR code routes (`/api/v1/certificates/verify/{certNumber}`).
+- ☁️ **Serverless Cloud Architecture:** Automated CI/CD pipelines deploying Spring Boot to HF Spaces, Python & React to Vercel, and database hosting on Supabase.
 
 ---
 

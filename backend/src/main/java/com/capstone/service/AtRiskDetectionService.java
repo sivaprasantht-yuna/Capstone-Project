@@ -1,6 +1,7 @@
 package com.capstone.service;
 
 import com.capstone.model.*;
+import com.capstone.notification.NotificationRequest;
 import com.capstone.repository.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -62,22 +63,24 @@ public class AtRiskDetectionService {
                     List<TeamMember> members = teamMemberRepository
                             .findByTeamIdAndInviteStatus(teamId, TeamMember.InviteStatus.ACCEPTED);
                     for (TeamMember tm : members) {
-                        notificationService.sendNotification(
-                                tm.getUser().getId(),
-                                "⚠️ Your team '" + team.getTeamName() + "' has been flagged as AT RISK due to " + INACTIVITY_DAYS + " days of inactivity.",
-                                Notification.NotificationType.AT_RISK_FLAG,
-                                teamId, "TEAM"
+                        notificationService.send(
+                                NotificationRequest.to(tm.getUser().getId())
+                                        .message("\u26a0\ufe0f Your team '" + team.getTeamName() + "' has been flagged as AT RISK due to " + INACTIVITY_DAYS + " days of inactivity.")
+                                        .type(Notification.NotificationType.AT_RISK_FLAG)
+                                        .reference(teamId, "TEAM")
+                                        .build()
                         );
                     }
 
                     // Notify mentor
                     mentorshipRepository
                             .findByTeamIdAndStatus(teamId, Mentorship.MentorshipStatus.ACCEPTED)
-                            .ifPresent(m -> notificationService.sendNotification(
-                                    m.getFaculty().getId(),
-                                    "⚠️ Team '" + team.getTeamName() + "' (which you mentor) has been flagged AT RISK — no activity in " + INACTIVITY_DAYS + " days.",
-                                    Notification.NotificationType.AT_RISK_FLAG,
-                                    teamId, "TEAM"
+                            .ifPresent(m -> notificationService.send(
+                                    NotificationRequest.to(m.getFaculty().getId())
+                                            .message("\u26a0\ufe0f Team '" + team.getTeamName() + "' (which you mentor) has been flagged AT RISK \u2014 no activity in " + INACTIVITY_DAYS + " days.")
+                                            .type(Notification.NotificationType.AT_RISK_FLAG)
+                                            .reference(teamId, "TEAM")
+                                            .build()
                             ));
 
                     log.warn("Team {} ('{}') flagged as AT RISK", teamId, team.getTeamName());
@@ -97,11 +100,12 @@ public class AtRiskDetectionService {
             // Notify team members
             teamMemberRepository
                     .findByTeamIdAndInviteStatus(m.getTeam().getId(), TeamMember.InviteStatus.ACCEPTED)
-                    .forEach(tm -> notificationService.sendNotification(
-                            tm.getUser().getId(),
-                            "⏰ Milestone '" + m.getTitle() + "' is overdue! Due date was " + m.getDueDate() + ".",
-                            Notification.NotificationType.MILESTONE_DUE,
-                            m.getId(), "MILESTONE"
+                    .forEach(tm -> notificationService.send(
+                            NotificationRequest.to(tm.getUser().getId())
+                                    .message("\u23f0 Milestone '" + m.getTitle() + "' is overdue! Due date was " + m.getDueDate() + ".")
+                                    .type(Notification.NotificationType.MILESTONE_DUE)
+                                    .reference(m.getId(), "MILESTONE")
+                                    .build()
                     ));
 
             log.warn("Milestone {} ('{}') for team {} marked OVERDUE", m.getId(), m.getTitle(), m.getTeam().getId());

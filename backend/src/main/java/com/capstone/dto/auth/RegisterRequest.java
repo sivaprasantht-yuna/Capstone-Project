@@ -21,6 +21,7 @@ public class RegisterRequest {
     private String role;            // STUDENT | FACULTY | ADMIN | INDUSTRY
 
     private String department;
+    private String contactNo;
     private Integer yearOfStudy;    // students
     private String designation;     // faculty
 }
