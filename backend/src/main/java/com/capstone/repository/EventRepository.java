@@ -13,6 +13,7 @@ import java.util.Optional;
 public interface EventRepository extends JpaRepository<Event, Long> {
 
     List<Event> findByTeamIdOrderByCreatedAtDesc(Long teamId);
+    List<Event> findByTeamIdOrderByCreatedAtAsc(Long teamId);
 
     Optional<Event> findTopByTeamIdOrderByCreatedAtDesc(Long teamId);
 

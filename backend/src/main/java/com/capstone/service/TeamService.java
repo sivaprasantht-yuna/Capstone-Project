@@ -33,6 +33,10 @@ public class TeamService {
     private final UserRepository userRepository;
     private final EventRepository eventRepository;
     private final NotificationService notificationService;
+    private final MentorshipRepository mentorshipRepository;
+    private final TeamDismantleRequestRepository dismantleRequestRepository;
+    private final MemberRemovalRequestRepository removalRequestRepository;
+    private final StudentContributionRepository contributionRepository;
 
     /** Observer Pattern — publisher that fires domain events to registered listeners */
     private final ApplicationEventPublisher eventPublisher;
@@ -397,6 +401,491 @@ public class TeamService {
         eventRepository.save(event);
     }
 
+    // ─── Team Dismantle (pre-mentor: direct) ──────────────────────────────────
+
+    @Transactional
+    public Team dismantleTeamDirect(Long teamId, Long leaderId, String reason) {
+        Team team = validateLeaderAction(teamId, leaderId);
+        if (hasMentor(teamId)) {
+            throw new RuntimeException("Mentor approval is required to dismantle this team.");
+        }
+        if (team.getStatus() == Team.TeamStatus.DISSOLVED) {
+            throw new RuntimeException("This team has already been dissolved.");
+        }
+        if (reason == null || reason.isBlank()) {
+            throw new RuntimeException("A reason is required to dismantle the team.");
+        }
+
+        team.setStatus(Team.TeamStatus.DISSOLVED);
+        team.setDismantleReason(reason);
+        team.setDismantledAt(LocalDateTime.now());
+        final Team savedTeam = teamRepository.save(team);
+
+        // Mark all members as FORMER
+        savedTeam.getMembers().stream()
+                .filter(m -> m.getInviteStatus() == TeamMember.InviteStatus.ACCEPTED)
+                .forEach(m -> {
+                    m.setMembershipStatus(TeamMember.MembershipStatus.FORMER_MEMBER);
+                    teamMemberRepository.save(m);
+                    // Update contribution record
+                    contributionRepository.findByTeamIdAndStudentId(teamId, m.getUser().getId())
+                            .ifPresent(c -> {
+                                c.setMembershipStatus(StudentContribution.MembershipStatus.FORMER);
+                                contributionRepository.save(c);
+                            });
+                    // Notify
+                    if (!m.getUser().getId().equals(leaderId)) {
+                        notificationService.send(
+                                NotificationRequest.to(m.getUser().getId())
+                                        .message("⚠️ Team '" + savedTeam.getTeamName() + "' has been dissolved by the team leader.")
+                                        .type(Notification.NotificationType.TEAM_DISSOLVED)
+                                        .reference(teamId, "TEAM")
+                                        .build()
+                        );
+                    }
+                });
+
+        logEvent(savedTeam, userRepository.findById(leaderId).orElse(null), "TEAM_DISSOLVED",
+                Map.of("reason", reason, "dismantledBy", leaderId));
+        return savedTeam;
+    }
+
+    // ─── Team Dismantle (post-mentor: request) ────────────────────────────────
+
+    @Transactional
+    public TeamDismantleRequest requestTeamDismantle(Long teamId, Long leaderId, String reason) {
+        Team team = validateLeaderAction(teamId, leaderId);
+        if (!hasMentor(teamId)) {
+            throw new RuntimeException("No mentor assigned. You can dismantle directly.");
+        }
+        if (team.getStatus() == Team.TeamStatus.DISSOLVED) {
+            throw new RuntimeException("This team has already been dissolved.");
+        }
+        if (dismantleRequestRepository.existsByTeamIdAndStatus(teamId, TeamDismantleRequest.DismantleRequestStatus.PENDING)) {
+            throw new RuntimeException("A dismantle request is already pending.");
+        }
+        if (reason == null || reason.isBlank()) {
+            throw new RuntimeException("A reason is required.");
+        }
+
+        User leader = userRepository.findById(leaderId).orElseThrow();
+        TeamDismantleRequest request = TeamDismantleRequest.builder()
+                .team(team)
+                .requestedBy(leader)
+                .reason(reason)
+                .status(TeamDismantleRequest.DismantleRequestStatus.PENDING)
+                .build();
+        request = dismantleRequestRepository.save(request);
+
+        team.setStatus(Team.TeamStatus.DISMANTLE_REQUESTED);
+        teamRepository.save(team);
+
+        // Notify mentor
+        Mentorship mentorship = mentorshipRepository
+                .findByTeamIdAndStatus(teamId, Mentorship.MentorshipStatus.ACCEPTED).orElse(null);
+        if (mentorship != null) {
+            notificationService.send(
+                    NotificationRequest.to(mentorship.getFaculty().getId())
+                            .message("🔔 Team '" + team.getTeamName() + "' has requested to be dissolved. Reason: " + reason)
+                            .type(Notification.NotificationType.TEAM_DISMANTLE_REQUEST)
+                            .reference(teamId, "TEAM")
+                            .build()
+            );
+        }
+
+        logEvent(team, leader, "DISMANTLE_REQUESTED", Map.of("reason", reason));
+        return request;
+    }
+
+    @Transactional
+    public Team approveDismantleRequest(Long requestId, Long mentorId, String comment) {
+        TeamDismantleRequest request = dismantleRequestRepository.findById(requestId)
+                .orElseThrow(() -> new RuntimeException("Request not found"));
+        if (request.getStatus() != TeamDismantleRequest.DismantleRequestStatus.PENDING) {
+            throw new RuntimeException("This request has already been processed.");
+        }
+
+        User mentor = userRepository.findById(mentorId).orElseThrow();
+        request.setStatus(TeamDismantleRequest.DismantleRequestStatus.APPROVED);
+        request.setMentorComment(comment);
+        request.setResolvedBy(mentor);
+        request.setResolvedAt(LocalDateTime.now());
+        dismantleRequestRepository.save(request);
+
+        Team team = request.getTeam();
+        team.setStatus(Team.TeamStatus.DISSOLVED);
+        team.setDismantleReason(request.getReason());
+        team.setDismantledAt(LocalDateTime.now());
+        teamRepository.save(team);
+
+        // Notify all members
+        team.getMembers().stream()
+                .filter(m -> m.getInviteStatus() == TeamMember.InviteStatus.ACCEPTED)
+                .forEach(m -> {
+                    m.setMembershipStatus(TeamMember.MembershipStatus.FORMER_MEMBER);
+                    teamMemberRepository.save(m);
+                    notificationService.send(
+                            NotificationRequest.to(m.getUser().getId())
+                                    .message("⚠️ Team '" + team.getTeamName() + "' has been dissolved by mentor approval.")
+                                    .type(Notification.NotificationType.TEAM_DISSOLVED)
+                                    .reference(team.getId(), "TEAM")
+                                    .build()
+                    );
+                });
+
+        logEvent(team, mentor, "DISMANTLE_APPROVED", Map.of("requestId", requestId));
+        return team;
+    }
+
+    @Transactional
+    public TeamDismantleRequest rejectDismantleRequest(Long requestId, Long mentorId, String comment) {
+        TeamDismantleRequest request = dismantleRequestRepository.findById(requestId)
+                .orElseThrow(() -> new RuntimeException("Request not found"));
+        if (request.getStatus() != TeamDismantleRequest.DismantleRequestStatus.PENDING) {
+            throw new RuntimeException("This request has already been processed.");
+        }
+
+        User mentor = userRepository.findById(mentorId).orElseThrow();
+        request.setStatus(TeamDismantleRequest.DismantleRequestStatus.REJECTED);
+        request.setMentorComment(comment);
+        request.setResolvedBy(mentor);
+        request.setResolvedAt(LocalDateTime.now());
+        dismantleRequestRepository.save(request);
+
+        // Restore team status to MENTOR_ASSIGNED
+        Team team = request.getTeam();
+        team.setStatus(Team.TeamStatus.MENTOR_ASSIGNED);
+        teamRepository.save(team);
+
+        // Notify leader
+        notificationService.send(
+                NotificationRequest.to(request.getRequestedBy().getId())
+                        .message("❌ Dismantle request for '" + team.getTeamName() + "' was rejected by mentor. " +
+                                (comment != null ? "Comment: " + comment : ""))
+                        .type(Notification.NotificationType.DISMANTLE_REJECTED)
+                        .reference(team.getId(), "TEAM")
+                        .build()
+        );
+
+        logEvent(team, mentor, "DISMANTLE_REJECTED", Map.of("requestId", requestId));
+        return request;
+    }
+
+    // ─── Member Removal (pre-mentor: direct) ──────────────────────────────────
+
+    @Transactional
+    public TeamMember removeMemberDirect(Long teamId, Long memberId, Long leaderId, String reason) {
+        Team team = validateLeaderAction(teamId, leaderId);
+        if (hasMentor(teamId)) {
+            throw new RuntimeException("Mentor approval is required to remove a member.");
+        }
+        if (memberId.equals(leaderId)) {
+            throw new RuntimeException("You cannot remove yourself as the team leader.");
+        }
+        if (reason == null || reason.isBlank()) {
+            throw new RuntimeException("A reason is required to remove a member.");
+        }
+
+        TeamMember member = teamMemberRepository.findByTeamIdAndUserId(teamId, memberId)
+                .orElseThrow(() -> new RuntimeException("Member not found in this team."));
+        if (member.getInviteStatus() != TeamMember.InviteStatus.ACCEPTED) {
+            throw new RuntimeException("This user is not an active team member.");
+        }
+
+        member.setMembershipStatus(TeamMember.MembershipStatus.REMOVED);
+        member.setRemovalReason(reason);
+        member.setRemovedAt(LocalDateTime.now());
+        member = teamMemberRepository.save(member);
+
+        // Preserve contribution history — mark as FORMER
+        contributionRepository.findByTeamIdAndStudentId(teamId, memberId).ifPresent(c -> {
+            c.setMembershipStatus(StudentContribution.MembershipStatus.FORMER);
+            contributionRepository.save(c);
+        });
+
+        // Notify removed member
+        notificationService.send(
+                NotificationRequest.to(memberId)
+                        .message("You have been removed from team '" + team.getTeamName() + "'. Reason: " + reason)
+                        .type(Notification.NotificationType.MEMBER_REMOVED)
+                        .reference(teamId, "TEAM")
+                        .build()
+        );
+
+        logEvent(team, userRepository.findById(leaderId).orElse(null), "MEMBER_REMOVED",
+                Map.of("removedUserId", memberId, "reason", reason));
+        return member;
+    }
+
+    // ─── Member Removal (post-mentor: request) ────────────────────────────────
+
+    @Transactional
+    public MemberRemovalRequest requestMemberRemoval(Long teamId, Long memberId, Long leaderId, String reason) {
+        Team team = validateLeaderAction(teamId, leaderId);
+        if (!hasMentor(teamId)) {
+            throw new RuntimeException("No mentor assigned. You can remove directly.");
+        }
+        if (memberId.equals(leaderId)) {
+            throw new RuntimeException("You cannot request removal of yourself.");
+        }
+        if (removalRequestRepository.existsByTeamIdAndTargetMemberIdAndStatus(
+                teamId, memberId, MemberRemovalRequest.RemovalRequestStatus.PENDING)) {
+            throw new RuntimeException("A removal request for this member is already pending.");
+        }
+        if (reason == null || reason.isBlank()) {
+            throw new RuntimeException("A reason is required.");
+        }
+
+        User leader = userRepository.findById(leaderId).orElseThrow();
+        User targetMember = userRepository.findById(memberId)
+                .orElseThrow(() -> new RuntimeException("Member not found"));
+
+        TeamMember membership = teamMemberRepository.findByTeamIdAndUserId(teamId, memberId)
+                .orElseThrow(() -> new RuntimeException("Member not found in this team"));
+        membership.setMembershipStatus(TeamMember.MembershipStatus.REMOVAL_REQUESTED);
+        teamMemberRepository.save(membership);
+
+        MemberRemovalRequest request = MemberRemovalRequest.builder()
+                .team(team)
+                .targetMember(targetMember)
+                .requestedBy(leader)
+                .reason(reason)
+                .status(MemberRemovalRequest.RemovalRequestStatus.PENDING)
+                .build();
+        request = removalRequestRepository.save(request);
+
+        // Notify mentor
+        Mentorship mentorship = mentorshipRepository
+                .findByTeamIdAndStatus(teamId, Mentorship.MentorshipStatus.ACCEPTED).orElse(null);
+        if (mentorship != null) {
+            notificationService.send(
+                    NotificationRequest.to(mentorship.getFaculty().getId())
+                            .message("🔔 Team leader requests removal of " + targetMember.getName() +
+                                    " from '" + team.getTeamName() + "'. Reason: " + reason)
+                            .type(Notification.NotificationType.MEMBER_REMOVAL_REQUEST)
+                            .reference(teamId, "TEAM")
+                            .build()
+            );
+        }
+
+        // Notify target member
+        notificationService.send(
+                NotificationRequest.to(memberId)
+                        .message("⚠️ A removal request has been submitted for you in team '" + team.getTeamName() + "'. Awaiting mentor review.")
+                        .type(Notification.NotificationType.MEMBER_REMOVAL_REQUEST)
+                        .reference(teamId, "TEAM")
+                        .build()
+        );
+
+        logEvent(team, leader, "REMOVAL_REQUESTED", Map.of("targetMemberId", memberId, "reason", reason));
+        return request;
+    }
+
+    @Transactional
+    public TeamMember approveRemovalRequest(Long requestId, Long mentorId, String comment) {
+        MemberRemovalRequest request = removalRequestRepository.findById(requestId)
+                .orElseThrow(() -> new RuntimeException("Request not found"));
+        if (request.getStatus() != MemberRemovalRequest.RemovalRequestStatus.PENDING) {
+            throw new RuntimeException("This request has already been processed.");
+        }
+
+        User mentor = userRepository.findById(mentorId).orElseThrow();
+        request.setStatus(MemberRemovalRequest.RemovalRequestStatus.APPROVED);
+        request.setMentorComment(comment);
+        request.setResolvedBy(mentor);
+        request.setResolvedAt(LocalDateTime.now());
+        removalRequestRepository.save(request);
+
+        Long teamId = request.getTeam().getId();
+        Long memberId = request.getTargetMember().getId();
+
+        TeamMember member = teamMemberRepository.findByTeamIdAndUserId(teamId, memberId)
+                .orElseThrow();
+        member.setMembershipStatus(TeamMember.MembershipStatus.REMOVED);
+        member.setRemovalReason(request.getReason());
+        member.setRemovedAt(LocalDateTime.now());
+        teamMemberRepository.save(member);
+
+        // Preserve contribution history
+        contributionRepository.findByTeamIdAndStudentId(teamId, memberId).ifPresent(c -> {
+            c.setMembershipStatus(StudentContribution.MembershipStatus.FORMER);
+            contributionRepository.save(c);
+        });
+
+        // Notify removed member
+        notificationService.send(
+                NotificationRequest.to(memberId)
+                        .message("You have been removed from team '" + request.getTeam().getTeamName() +
+                                "' following mentor review." + (comment != null ? " Mentor note: " + comment : ""))
+                        .type(Notification.NotificationType.MEMBER_REMOVED)
+                        .reference(teamId, "TEAM")
+                        .build()
+        );
+
+        logEvent(request.getTeam(), mentor, "REMOVAL_APPROVED", Map.of("requestId", requestId, "memberId", memberId));
+        return member;
+    }
+
+    @Transactional
+    public MemberRemovalRequest rejectRemovalRequest(Long requestId, Long mentorId, String comment) {
+        MemberRemovalRequest request = removalRequestRepository.findById(requestId)
+                .orElseThrow(() -> new RuntimeException("Request not found"));
+        if (request.getStatus() != MemberRemovalRequest.RemovalRequestStatus.PENDING) {
+            throw new RuntimeException("This request has already been processed.");
+        }
+
+        User mentor = userRepository.findById(mentorId).orElseThrow();
+        request.setStatus(MemberRemovalRequest.RemovalRequestStatus.REJECTED);
+        request.setMentorComment(comment);
+        request.setResolvedBy(mentor);
+        request.setResolvedAt(LocalDateTime.now());
+        removalRequestRepository.save(request);
+
+        // Restore member status
+        teamMemberRepository.findByTeamIdAndUserId(request.getTeam().getId(), request.getTargetMember().getId())
+                .ifPresent(m -> {
+                    m.setMembershipStatus(TeamMember.MembershipStatus.ACTIVE);
+                    teamMemberRepository.save(m);
+                });
+
+        // Notify leader
+        notificationService.send(
+                NotificationRequest.to(request.getRequestedBy().getId())
+                        .message("❌ Removal request for " + request.getTargetMember().getName() +
+                                " was rejected by mentor. " + (comment != null ? "Comment: " + comment : ""))
+                        .type(Notification.NotificationType.REMOVAL_REQUEST_REJECTED)
+                        .reference(request.getTeam().getId(), "TEAM")
+                        .build()
+        );
+
+        logEvent(request.getTeam(), mentor, "REMOVAL_REJECTED", Map.of("requestId", requestId));
+        return request;
+    }
+
+    // ─── Cancel Invitation ────────────────────────────────────────────────────
+
+    @Transactional
+    public void cancelInvitation(Long teamId, Long inviteeId, Long leaderId) {
+        validateLeaderAction(teamId, leaderId);
+        TeamMember member = teamMemberRepository.findByTeamIdAndUserId(teamId, inviteeId)
+                .orElseThrow(() -> new RuntimeException("Invitation not found"));
+        if (member.getInviteStatus() != TeamMember.InviteStatus.PENDING) {
+            throw new RuntimeException("This invitation cannot be cancelled (not pending).");
+        }
+        member.setInviteStatus(TeamMember.InviteStatus.CANCELLED);
+        teamMemberRepository.save(member);
+
+        notificationService.send(
+                NotificationRequest.to(inviteeId)
+                        .message("Your team invitation has been cancelled.")
+                        .type(Notification.NotificationType.INVITATION_CANCELLED)
+                        .reference(teamId, "TEAM")
+                        .build()
+        );
+    }
+
+    // ─── Override inviteMember to add message + validations ──────────────────
+
+    @Transactional
+    public TeamMember inviteMemberWithMessage(Long teamId, Long inviteeId, Long inviterId, String message) {
+        Team team = getTeamById(teamId);
+        if (team.getStatus() == Team.TeamStatus.DISSOLVED) {
+            throw new RuntimeException("Cannot invite to a dissolved team.");
+        }
+        Project project = team.getProject();
+        if (project != null) {
+            long acceptedCount = team.getMembers().stream()
+                    .filter(m -> m.getInviteStatus() == TeamMember.InviteStatus.ACCEPTED
+                            && m.getMembershipStatus() == TeamMember.MembershipStatus.ACTIVE)
+                    .count();
+            if (project.getMaxTeamSize() != null && acceptedCount >= project.getMaxTeamSize()) {
+                throw new RuntimeException("Team has reached its maximum capacity of " + project.getMaxTeamSize() + " members.");
+            }
+            boolean pendingExists = team.getMembers().stream()
+                    .anyMatch(m -> m.getUser().getId().equals(inviteeId)
+                            && m.getInviteStatus() == TeamMember.InviteStatus.PENDING);
+            if (pendingExists) {
+                throw new RuntimeException("An invitation for this student is already pending.");
+            }
+        }
+
+        User invitee = userRepository.findById(inviteeId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        boolean activeOrAccepted = team.getMembers().stream()
+                .anyMatch(m -> m.getUser().getId().equals(inviteeId)
+                        && m.getInviteStatus() == TeamMember.InviteStatus.ACCEPTED
+                        && m.getMembershipStatus() == TeamMember.MembershipStatus.ACTIVE);
+        if (activeOrAccepted) {
+            throw new RuntimeException("This student is already an active member of this team.");
+        }
+
+        TeamMember member = TeamMember.builder()
+                .team(team)
+                .user(invitee)
+                .inviteStatus(TeamMember.InviteStatus.PENDING)
+                .inviteMessage(message)
+                .membershipStatus(TeamMember.MembershipStatus.ACTIVE)
+                .build();
+        member = teamMemberRepository.save(member);
+
+        notificationService.send(
+                NotificationRequest.to(inviteeId)
+                        .message("You've been invited to join team '" + team.getTeamName() + "'!" +
+                                (message != null && !message.isBlank() ? " Message: " + message : ""))
+                        .type(Notification.NotificationType.TEAM_INVITE)
+                        .reference(teamId, "TEAM")
+                        .build()
+        );
+
+        return member;
+    }
+
+    // ─── Pending governance requests (for mentor dashboard) ──────────────────
+
+    @Transactional(readOnly = true)
+    public List<TeamDismantleRequest> getPendingDismantleRequests() {
+        return dismantleRequestRepository.findByStatusOrderByRequestedAtAsc(
+                TeamDismantleRequest.DismantleRequestStatus.PENDING);
+    }
+
+    @Transactional(readOnly = true)
+    public List<MemberRemovalRequest> getPendingRemovalRequests() {
+        return removalRequestRepository.findByStatusOrderByRequestedAtAsc(
+                MemberRemovalRequest.RemovalRequestStatus.PENDING);
+    }
+
+    @Transactional(readOnly = true)
+    public List<TeamDismantleRequest> getDismantleRequestsForTeam(Long teamId) {
+        return dismantleRequestRepository.findByTeamIdOrderByRequestedAtDesc(teamId);
+    }
+
+    @Transactional(readOnly = true)
+    public List<MemberRemovalRequest> getRemovalRequestsForTeam(Long teamId) {
+        return removalRequestRepository.findByTeamIdOrderByRequestedAtDesc(teamId);
+    }
+
+    // ─── Internal helpers ─────────────────────────────────────────────────────
+
+    private boolean hasMentor(Long teamId) {
+        return mentorshipRepository.existsByTeamIdAndStatus(teamId, Mentorship.MentorshipStatus.ACCEPTED);
+    }
+
+    private Team validateLeaderAction(Long teamId, Long userId) {
+        Team team = getTeamById(teamId);
+        boolean isLeader = team.getMembers().stream()
+                .anyMatch(m -> m.getUser().getId().equals(userId)
+                        && "Team Lead".equalsIgnoreCase(m.getRoleInTeam())
+                        && m.getInviteStatus() == TeamMember.InviteStatus.ACCEPTED);
+        // Also check if user is the project poster
+        if (!isLeader && team.getProject() != null && team.getProject().getPostedBy() != null) {
+            isLeader = team.getProject().getPostedBy().getId().equals(userId);
+        }
+        if (!isLeader) {
+            throw new RuntimeException("You are not the Team Leader.");
+        }
+        return team;
+    }
+
     /**
      * Leaderboard — sorted by totalScore DESC, then teamName ASC.
      *
@@ -416,3 +905,4 @@ public class TeamService {
         return MergeSort.sort(allTeams, leaderboardOrder);
     }
 }
+

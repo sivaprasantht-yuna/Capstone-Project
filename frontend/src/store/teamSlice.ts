@@ -21,9 +21,12 @@ export interface TeamState {
   leaderId: string | null
   members: TeamMember[]
   memberLimit: number
+  minMemberLimit: number
   currentMemberCount: number
-  status: 'RECRUITING' | 'FULL' | 'LOCKED' | null
+  status: 'RECRUITING' | 'FULL' | 'LOCKED' | 'FORMING' | 'MENTOR_PENDING' | 'ACTIVE' | 'MENTOR_ASSIGNED' | 'DISMANTLE_REQUESTED' | 'UNDER_REVIEW' | 'COMPLETED' | 'DISSOLVED' | null
+  hasMentor: boolean
   requiredSkills: string[]
+  pendingDismantleRequestId: string | null
 }
 
 function getUserStorageKey(): string | null {
@@ -53,10 +56,13 @@ function loadFromStorage(): TeamState {
     isLeader: false,
     leaderId: null,
     members: [],
-    memberLimit: 4,
+    memberLimit: 6,
+    minMemberLimit: 2,
     currentMemberCount: 0,
     status: null,
+    hasMentor: false,
     requiredSkills: [],
+    pendingDismantleRequestId: null,
   }
 }
 
@@ -103,10 +109,13 @@ const teamSlice = createSlice({
         isLeader: false,
         leaderId: null,
         members: [],
-        memberLimit: 4,
+        memberLimit: 6,
+        minMemberLimit: 2,
         currentMemberCount: 0,
         status: null,
+        hasMentor: false,
         requiredSkills: [],
+        pendingDismantleRequestId: null,
       })
       const key = getUserStorageKey()
       if (key) localStorage.removeItem(key)

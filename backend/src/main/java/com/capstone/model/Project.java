@@ -33,6 +33,10 @@ public class Project {
     @Builder.Default
     private Integer maxTeamSize = 4;
 
+    @Column(name = "min_team_size")
+    @Builder.Default
+    private Integer minTeamSize = 2;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     @Builder.Default

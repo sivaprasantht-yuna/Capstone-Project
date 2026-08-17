@@ -22,4 +22,5 @@ public interface MentorshipRepository extends JpaRepository<Mentorship, Long> {
     Double getAverageRatingForMentor(Long facultyId);
 
     boolean existsByTeamIdAndFacultyIdAndStatus(Long teamId, Long facultyId, Mentorship.MentorshipStatus status);
+    boolean existsByTeamIdAndStatus(Long teamId, Mentorship.MentorshipStatus status);
 }

@@ -17,6 +17,7 @@ import MentorMatching from './MentorMatching'
 import ProjectWorkspace from './ProjectWorkspace'
 import TeamChat from './TeamChat'
 import ProgressPortal from './ProgressPortal'
+import StudentProgressPage from './StudentProgressPage'
 import CertificatePage from './CertificatePage'
 import { RootState } from '../../store'
 import { setTeam, clearTeam, TeamMember } from '../../store/teamSlice'
@@ -139,6 +140,7 @@ export default function StudentPortal() {
         <Route path="workspace"      element={<ProjectWorkspace />} />
         <Route path="chat"           element={<TeamChat />} />
         <Route path="progress"       element={<ProgressPortal />} />
+        <Route path="progress/student/:studentId?" element={<StudentProgressPage />} />
         <Route path="certificate"    element={<CertificatePage />} />
       </Routes>
     </PortalLayout>

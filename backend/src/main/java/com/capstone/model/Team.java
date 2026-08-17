@@ -74,12 +74,25 @@ public class Team {
     @JsonIgnore
     private Certificate certificate;
 
+    // ─── Dismantle Fields ─────────────────────────────────────────────────────
+    @Column(name = "dismantle_reason", columnDefinition = "TEXT")
+    private String dismantleReason;
+
+    @Column(name = "dismantled_at")
+    private LocalDateTime dismantledAt;
+
+    @Column(name = "min_team_size")
+    @Builder.Default
+    private Integer minTeamSize = 2;
+
     public enum TeamStatus {
-        FORMING,     // team members being assembled
-        MENTOR_PENDING, // team finalized, awaiting mentor
-        ACTIVE,      // mentor accepted, project in progress
-        UNDER_REVIEW,// final submission under evaluation
-        COMPLETED,   // project certified and closed
-        DISSOLVED    // team disbanded
+        FORMING,             // team members being assembled
+        MENTOR_PENDING,      // team finalized, awaiting mentor
+        ACTIVE,              // project in progress (no mentor yet or early stage)
+        MENTOR_ASSIGNED,     // mentor has been allocated and accepted
+        DISMANTLE_REQUESTED, // leader has submitted dismantle request to mentor
+        UNDER_REVIEW,        // final submission under evaluation
+        COMPLETED,           // project certified and closed
+        DISSOLVED            // team disbanded
     }
 }

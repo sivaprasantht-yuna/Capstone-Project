@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
+import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useSelector, useDispatch } from 'react-redux'
 import { useNavigate } from 'react-router-dom'
@@ -6,7 +7,7 @@ import {
   Crown, MailOpen, UserPlus, X, Search, Send,
   CheckCircle, XCircle, Users, Shield, RefreshCw,
   Phone, BookOpen, Hash, Briefcase, Star, ChevronRight,
-  Linkedin, Github, ExternalLink, Contact, Mail
+  Linkedin, Github, ExternalLink, Contact, Mail, AlertTriangle, Code2
 } from 'lucide-react'
 import { RootState } from '../../store'
 import { TeamMember, setTeam } from '../../store/teamSlice'
@@ -185,10 +186,12 @@ function Popup({
 
 // ─── Member Profile Popup ────────────────────────────────────────────────────
 function MemberProfilePopup({
-  member, onClose
+  member, onClose, currentUserIsLeader, onRemoveClick
 }: {
   member: TeamMember | null
   onClose: () => void
+  currentUserIsLeader: boolean
+  onRemoveClick?: (member: TeamMember) => void
 }) {
   const isLeader = member?.role === 'LEADER'
 
@@ -369,6 +372,21 @@ function MemberProfilePopup({
               <ExternalLink size={13} />
             </a>
           </div>
+
+          {/* ── Governance Actions (Remove) ── */}
+          {currentUserIsLeader && !isLeader && onRemoveClick && (
+            <div className="pt-2 border-t border-white/10 flex justify-end">
+              <button
+                onClick={() => {
+                  onClose()
+                  onRemoveClick(member)
+                }}
+                className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold text-red-400 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 transition-all"
+              >
+                <XCircle size={14} /> Remove Member
+              </button>
+            </div>
+          )}
         </div>
       )}
     </Popup>
@@ -1083,6 +1101,115 @@ function MemberCard({ member, onClick }: { member: TeamMember; onClick: () => vo
   )
 }
 
+// ─── Dismantle Team Popup ─────────────────────────────────────────────────────
+function DismantleTeamPopup({
+  open, onClose, teamId, hasMentor, onSuccess
+}: {
+  open: boolean; onClose: () => void; teamId: string; hasMentor: boolean; onSuccess: () => void
+}) {
+  const [reason, setReason] = useState('')
+  const [loading, setLoading] = useState(false)
+
+  const handleSubmit = async () => {
+    if (!reason.trim()) return toast.error('A reason is required.')
+    setLoading(true)
+    try {
+      if (hasMentor) {
+        await api.post(`/teams/${teamId}/dismantle-request`, { reason })
+        toast.success('Dismantle request sent to mentor.')
+      } else {
+        await api.post(`/teams/${teamId}/dismantle`, { reason })
+        toast.success('Team dismantled.')
+      }
+      onSuccess()
+      onClose()
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Failed to process dismantle action.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <Popup open={open} onClose={onClose} title={hasMentor ? "Request Team Dismantle" : "Dismantle Team"} icon={<AlertTriangle size={17} className="text-white" />}>
+      <div className="space-y-4">
+        <p className="text-sm text-white/60">
+          {hasMentor
+            ? "Since your team has an assigned mentor, dismantling requires mentor approval. Please provide a detailed reason."
+            : "This action cannot be undone. All members will be removed and the team will be permanently dissolved."}
+        </p>
+        <textarea
+          value={reason} onChange={e => setReason(e.target.value)}
+          placeholder="Reason for dismantling the team..."
+          className="input-dark w-full h-24 resize-none"
+        />
+        <div className="flex gap-3 justify-end pt-2">
+          <button onClick={onClose} className="btn-secondary">Cancel</button>
+          <button onClick={handleSubmit} disabled={loading} className="btn-danger flex items-center gap-2">
+            {loading ? <RefreshCw size={14} className="animate-spin" /> : <AlertTriangle size={14} />}
+            {hasMentor ? 'Submit Request' : 'Dismantle Team'}
+          </button>
+        </div>
+      </div>
+    </Popup>
+  )
+}
+
+// ─── Remove Member Popup ──────────────────────────────────────────────────────
+function RemoveMemberPopup({
+  open, onClose, teamId, member, hasMentor, onSuccess
+}: {
+  open: boolean; onClose: () => void; teamId: string; member: TeamMember | null; hasMentor: boolean; onSuccess: () => void
+}) {
+  const [reason, setReason] = useState('')
+  const [loading, setLoading] = useState(false)
+
+  const handleSubmit = async () => {
+    if (!member) return
+    if (!reason.trim()) return toast.error('A reason is required.')
+    setLoading(true)
+    try {
+      if (hasMentor) {
+        await api.post(`/teams/${teamId}/members/${member.id}/removal-request`, { reason })
+        toast.success('Removal request sent to mentor.')
+      } else {
+        await api.delete(`/teams/${teamId}/members/${member.id}`, { data: { reason } })
+        toast.success('Member removed.')
+      }
+      onSuccess()
+      onClose()
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Failed to process removal action.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <Popup open={open} onClose={onClose} title={hasMentor ? "Request Member Removal" : "Remove Member"} icon={<XCircle size={17} className="text-white" />}>
+      <div className="space-y-4">
+        <p className="text-sm text-white/60">
+          {hasMentor
+            ? `Request removal of ${member?.name}. This requires mentor approval.`
+            : `Remove ${member?.name} from the team. This action is immediate.`}
+        </p>
+        <textarea
+          value={reason} onChange={e => setReason(e.target.value)}
+          placeholder="Reason for removal..."
+          className="input-dark w-full h-24 resize-none"
+        />
+        <div className="flex gap-3 justify-end pt-2">
+          <button onClick={onClose} className="btn-secondary">Cancel</button>
+          <button onClick={handleSubmit} disabled={loading} className="btn-danger flex items-center gap-2">
+            {loading ? <RefreshCw size={14} className="animate-spin" /> : <XCircle size={14} />}
+            {hasMentor ? 'Submit Request' : 'Remove Member'}
+          </button>
+        </div>
+      </div>
+    </Popup>
+  )
+}
+
 // ─── Team Portal Main ────────────────────────────────────────────────────────
 export default function TeamPortal() {
   const navigate  = useNavigate()
@@ -1093,7 +1220,8 @@ export default function TeamPortal() {
   const [addMembersOpen, setAddMembersOpen] = useState(false)
   const [selectedMember, setSelectedMember] = useState<TeamMember | null>(null)
   const [pendingCount,   setPendingCount]   = useState(0)
-
+  const [dismantleTeamOpen, setDismantleTeamOpen] = useState(false)
+  const [removeMemberTarget, setRemoveMemberTarget] = useState<TeamMember | null>(null)
   // ── Helper: fetch latest team state from backend and sync to Redux ──
   const refreshTeam = useMemo(() => async () => {
     if (!team.teamId) return
@@ -1251,6 +1379,22 @@ export default function TeamPortal() {
                   Add Members
                 </div>
               </div>
+
+              {/* Dismantle Team */}
+              {team.isLeader && (
+                <div className="relative group">
+                  <button
+                    onClick={() => setDismantleTeamOpen(true)}
+                    className="w-11 h-11 rounded-2xl flex items-center justify-center border border-red-500/20 text-red-400 hover:text-red-300 hover:border-red-500/50 hover:bg-red-500/10 transition-all ml-1"
+                    style={{ background: 'rgba(239,68,68,0.05)' }}
+                  >
+                    <AlertTriangle size={20} />
+                  </button>
+                  <div className="absolute right-0 top-full mt-2 px-2.5 py-1 bg-surface-100 text-white text-xs rounded-lg shadow-card whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-10 border border-white/10">
+                    Dismantle Team
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -1344,6 +1488,28 @@ export default function TeamPortal() {
       <MemberProfilePopup
         member={selectedMember}
         onClose={() => setSelectedMember(null)}
+        currentUserIsLeader={team.isLeader}
+        onRemoveClick={(m) => setRemoveMemberTarget(m)}
+      />
+
+      <DismantleTeamPopup
+        open={dismantleTeamOpen}
+        onClose={() => setDismantleTeamOpen(false)}
+        teamId={team.teamId}
+        hasMentor={team.hasMentor}
+        onSuccess={() => {
+          refreshTeam()
+          if (!team.hasMentor) navigate('/student/team', { replace: true })
+        }}
+      />
+
+      <RemoveMemberPopup
+        open={!!removeMemberTarget}
+        onClose={() => setRemoveMemberTarget(null)}
+        teamId={team.teamId}
+        member={removeMemberTarget}
+        hasMentor={team.hasMentor}
+        onSuccess={refreshTeam}
       />
     </div>
   )

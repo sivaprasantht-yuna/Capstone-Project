@@ -132,13 +132,182 @@ public class TeamController {
         return ResponseEntity.ok(teamService.getAtRiskTeams());
     }
 
+    // ─── Dismantle Team (direct, pre-mentor) ──────────────────────────────────
+
+    @PostMapping("/{teamId}/dismantle")
+    @PreAuthorize("hasRole('STUDENT')")
+    public ResponseEntity<Team> dismantleTeam(
+            @PathVariable Long teamId,
+            @RequestBody ReasonRequest req,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        User user = getUser(userDetails);
+        return ResponseEntity.ok(teamService.dismantleTeamDirect(teamId, user.getId(), req.getReason()));
+    }
+
+    // ─── Dismantle Request (post-mentor) ──────────────────────────────────────
+
+    @PostMapping("/{teamId}/dismantle-request")
+    @PreAuthorize("hasRole('STUDENT')")
+    public ResponseEntity<TeamDismantleRequest> requestDismantle(
+            @PathVariable Long teamId,
+            @RequestBody ReasonRequest req,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        User user = getUser(userDetails);
+        return ResponseEntity.ok(teamService.requestTeamDismantle(teamId, user.getId(), req.getReason()));
+    }
+
+    @PostMapping("/{teamId}/dismantle-request/{requestId}/approve")
+    @PreAuthorize("hasRole('FACULTY')")
+    public ResponseEntity<Team> approveDismantleRequest(
+            @PathVariable Long teamId,
+            @PathVariable Long requestId,
+            @RequestBody(required = false) CommentRequest req,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        User mentor = getUser(userDetails);
+        return ResponseEntity.ok(teamService.approveDismantleRequest(requestId, mentor.getId(),
+                req != null ? req.getComment() : null));
+    }
+
+    @PostMapping("/{teamId}/dismantle-request/{requestId}/reject")
+    @PreAuthorize("hasRole('FACULTY')")
+    public ResponseEntity<TeamDismantleRequest> rejectDismantleRequest(
+            @PathVariable Long teamId,
+            @PathVariable Long requestId,
+            @RequestBody(required = false) CommentRequest req,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        User mentor = getUser(userDetails);
+        return ResponseEntity.ok(teamService.rejectDismantleRequest(requestId, mentor.getId(),
+                req != null ? req.getComment() : null));
+    }
+
+    @GetMapping("/{teamId}/dismantle-requests")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<List<TeamDismantleRequest>> getDismantleRequests(@PathVariable Long teamId) {
+        return ResponseEntity.ok(teamService.getDismantleRequestsForTeam(teamId));
+    }
+
+    // ─── Member Removal (direct, pre-mentor) ──────────────────────────────────
+
+    @DeleteMapping("/{teamId}/members/{memberId}")
+    @PreAuthorize("hasRole('STUDENT')")
+    public ResponseEntity<TeamMember> removeMember(
+            @PathVariable Long teamId,
+            @PathVariable Long memberId,
+            @RequestBody ReasonRequest req,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        User user = getUser(userDetails);
+        return ResponseEntity.ok(teamService.removeMemberDirect(teamId, memberId, user.getId(), req.getReason()));
+    }
+
+    // ─── Removal Request (post-mentor) ────────────────────────────────────────
+
+    @PostMapping("/{teamId}/members/{memberId}/removal-request")
+    @PreAuthorize("hasRole('STUDENT')")
+    public ResponseEntity<MemberRemovalRequest> requestRemoval(
+            @PathVariable Long teamId,
+            @PathVariable Long memberId,
+            @RequestBody ReasonRequest req,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        User user = getUser(userDetails);
+        return ResponseEntity.ok(teamService.requestMemberRemoval(teamId, memberId, user.getId(), req.getReason()));
+    }
+
+    @PostMapping("/{teamId}/removal-request/{requestId}/approve")
+    @PreAuthorize("hasRole('FACULTY')")
+    public ResponseEntity<TeamMember> approveRemoval(
+            @PathVariable Long teamId,
+            @PathVariable Long requestId,
+            @RequestBody(required = false) CommentRequest req,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        User mentor = getUser(userDetails);
+        return ResponseEntity.ok(teamService.approveRemovalRequest(requestId, mentor.getId(),
+                req != null ? req.getComment() : null));
+    }
+
+    @PostMapping("/{teamId}/removal-request/{requestId}/reject")
+    @PreAuthorize("hasRole('FACULTY')")
+    public ResponseEntity<MemberRemovalRequest> rejectRemoval(
+            @PathVariable Long teamId,
+            @PathVariable Long requestId,
+            @RequestBody(required = false) CommentRequest req,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        User mentor = getUser(userDetails);
+        return ResponseEntity.ok(teamService.rejectRemovalRequest(requestId, mentor.getId(),
+                req != null ? req.getComment() : null));
+    }
+
+    @GetMapping("/{teamId}/removal-requests")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<List<MemberRemovalRequest>> getRemovalRequests(@PathVariable Long teamId) {
+        return ResponseEntity.ok(teamService.getRemovalRequestsForTeam(teamId));
+    }
+
+    // ─── Invitation management ────────────────────────────────────────────────
+
+    @DeleteMapping("/{teamId}/invitations/{inviteeId}")
+    @PreAuthorize("hasRole('STUDENT')")
+    public ResponseEntity<Void> cancelInvitation(
+            @PathVariable Long teamId,
+            @PathVariable Long inviteeId,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        User user = getUser(userDetails);
+        teamService.cancelInvitation(teamId, inviteeId, user.getId());
+        return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/{teamId}/invite-with-message")
+    @PreAuthorize("hasRole('STUDENT')")
+    public ResponseEntity<TeamMember> inviteWithMessage(
+            @PathVariable Long teamId,
+            @RequestBody InviteRequest req,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        User user = getUser(userDetails);
+        return ResponseEntity.ok(teamService.inviteMemberWithMessage(
+                teamId, req.getInviteeId(), user.getId(), req.getMessage()));
+    }
+
+    // ─── Mentor governance dashboard ──────────────────────────────────────────
+
+    @GetMapping("/pending-actions")
+    @PreAuthorize("hasRole('FACULTY')")
+    public ResponseEntity<java.util.Map<String, Object>> getPendingActions() {
+        return ResponseEntity.ok(java.util.Map.of(
+                "dismantleRequests", teamService.getPendingDismantleRequests(),
+                "removalRequests", teamService.getPendingRemovalRequests()
+        ));
+    }
+
+    // ─── Inner helper ─────────────────────────────────────────────────────────
+
+    private User getUser(UserDetails userDetails) {
+        return userRepository.findByEmail(userDetails.getUsername())
+                .orElseThrow(() -> new RuntimeException("User not found"));
+    }
+
     @Data
     public static class CreateTeamRequest {
         private String teamName;
         private List<String> domains;
         private Integer maxTeamSize;
+        private Integer minTeamSize;
         private String requiredSkills; // JSON string from frontend
         private String projectFocus;
+    }
+
+    @Data
+    public static class ReasonRequest {
+        private String reason;
+    }
+
+    @Data
+    public static class CommentRequest {
+        private String comment;
+    }
+
+    @Data
+    public static class InviteRequest {
+        private Long inviteeId;
+        private String message;
     }
 
     @Data
@@ -154,3 +323,4 @@ public class TeamController {
         private String projectFocus;
     }
 }
+
