@@ -12,7 +12,6 @@ const NAV_ITEMS = [
   { label: 'Mentor Requests', href: '/faculty/requests',   icon: <ClipboardList size={18} /> },
   { label: 'Active Teams',    href: '/faculty/teams',      icon: <Users size={18} /> },
   { label: 'Grading',         href: '/faculty/grading',    icon: <Star size={18} /> },
-  { label: 'My Profile',      href: '/faculty/profile',    icon: <BookOpen size={18} /> },
 ]
 
 export default function FacultyPortal() {
@@ -20,7 +19,7 @@ export default function FacultyPortal() {
     <PortalLayout
       navItems={NAV_ITEMS}
       portalTitle="Faculty Portal"
-      portalColor="from-emerald-400 to-teal-400"
+      portalColor="from-emerald-600 to-teal"
     >
       <Routes>
         <Route path="/"          element={<Navigate to="dashboard" replace />} />

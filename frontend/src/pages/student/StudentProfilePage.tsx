@@ -3,10 +3,11 @@ import { createPortal } from 'react-dom'
 import { useSelector, useDispatch } from 'react-redux'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-  User, GraduationCap, Calendar, Phone, Mail,
+  User, GraduationCap, Calendar, Mail,
   Briefcase, Code2, Cpu, Camera, Pencil, Contact,
   Target, X, Plus, Check, Loader2, Image as ImageIcon,
-  Linkedin, Github, ExternalLink
+  Linkedin, Github, ExternalLink, Award, Sparkles,
+  CheckCircle2, Edit3, Shield, BookOpen, Clock, Lock
 } from 'lucide-react'
 import { RootState } from '../../store'
 import { updateUserProfile } from '../../store/authSlice'
@@ -19,9 +20,8 @@ interface ProfileData {
   role: string
   department: string
   rollNumber: string
-  domain: string
+  yearOfStudy?: number
   bio: string
-  contactNo: string
   teamRole: string
   memberSince: string
   avatarUrl: string
@@ -59,26 +59,27 @@ export default function StudentProfilePage() {
 
   // Profile Form State
   const [profile, setProfile] = useState<ProfileData>({
-    name: user?.name || 'Siva Prasanth T',
-    email: user?.email || 'siva.prasanth21@bit.edu.in',
+    name: user?.name || '',
+    email: user?.email || '',
     role: 'Student',
-    department: user?.department || 'Mechatronics Engineering',
-    rollNumber: user?.rollNumber || '21MTR1234',
-    domain: user?.domain || 'Robotics & Automation',
-    bio: user?.bio || 'Passionate about robotics and automation. Love building intelligent machines and solving real-world problems through technology. Always eager to learn and collaborate.',
-    contactNo: user?.contactNo || '+91 98765 43210',
-    teamRole: team?.isLeader ? 'Team Lead' : (team?.teamId ? 'Team Member' : 'Team Lead'),
-    memberSince: 'Aug 2023',
+    department: user?.department || 'Engineering',
+    rollNumber: user?.rollNumber || '',
+    yearOfStudy: user?.yearOfStudy || 3,
+    bio: user?.bio || '',
+    teamRole: team?.isLeader ? 'Team Lead' : (team?.teamId ? 'Team Member' : 'Student'),
+    memberSince: '2026',
     avatarUrl: user?.avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=400',
-    linkedinLink: 'https://linkedin.com/in/sivaprasanth',
-    githubLink: 'https://github.com/sivaprasanth',
-    skills: user?.skills && user.skills.length > 0 ? user.skills : DEFAULT_SKILLS
+    linkedinLink: user?.linkedinLink || '',
+    githubLink: user?.githubLink || '',
+    skills: user?.skills && user.skills.length > 0 ? user.skills : []
   })
 
   // Form temporary states
   const [form, setForm] = useState<ProfileData>(profile)
   const [avatarInput, setAvatarInput] = useState(profile.avatarUrl)
   const [newSkill, setNewSkill] = useState('')
+  const [linkedinVerified, setLinkedinVerified] = useState(false)
+  const [githubVerified, setGithubVerified] = useState(false)
 
   // Sync profile data from backend API
   useEffect(() => {
@@ -91,20 +92,19 @@ export default function StudentProfilePage() {
         const data = res.data
         if (data) {
           const updated: ProfileData = {
-            name: data.name || user?.name || 'Siva Prasanth T',
-            email: data.email || user?.email || 'siva.prasanth21@bit.edu.in',
+            name: data.name || user?.name || '',
+            email: data.email || user?.email || '',
             role: 'Student',
-            department: data.department || user?.department || 'Mechatronics Engineering',
-            rollNumber: data.rollNumber || '21MTR1234',
-            domain: data.domain || 'Robotics & Automation',
-            bio: data.bio || 'Passionate about robotics and automation. Love building intelligent machines and solving real-world problems through technology. Always eager to learn and collaborate.',
-            contactNo: data.contactNo || '+91 98765 43210',
+            department: data.department || user?.department || 'Engineering',
+            rollNumber: data.rollNumber || user?.rollNumber || '',
+            yearOfStudy: data.yearOfStudy || user?.yearOfStudy || 3,
+            bio: data.bio ?? user?.bio ?? '',
             teamRole: data.teamRole || (team?.isLeader ? 'Team Lead' : 'Team Member'),
-            memberSince: data.createdAt ? new Date(data.createdAt).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : 'Aug 2023',
+            memberSince: data.createdAt ? new Date(data.createdAt).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : '2026',
             avatarUrl: data.avatarUrl || user?.avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=400',
-            linkedinLink: data.linkedinLink || 'https://linkedin.com/in/sivaprasanth',
-            githubLink: data.githubLink || 'https://github.com/sivaprasanth',
-            skills: data.skills && data.skills.length > 0 ? data.skills : DEFAULT_SKILLS
+            linkedinLink: data.linkedinLink || '',
+            githubLink: data.githubLink || '',
+            skills: Array.isArray(data.skills) ? data.skills : []
           }
           setProfile(updated)
           setForm(updated)
@@ -115,8 +115,6 @@ export default function StudentProfilePage() {
             avatarUrl: updated.avatarUrl,
             rollNumber: updated.rollNumber,
             bio: updated.bio,
-            domain: updated.domain,
-            contactNo: updated.contactNo,
             skills: updated.skills
           }))
         }
@@ -133,7 +131,46 @@ export default function StudentProfilePage() {
 
   const openEditModal = () => {
     setForm(profile)
+    setLinkedinVerified(Boolean(profile.linkedinLink?.trim()))
+    setGithubVerified(Boolean(profile.githubLink?.trim()))
     setEditModalOpen(true)
+  }
+
+  const handleVerifyLinkedin = () => {
+    let url = form.linkedinLink?.trim()
+    if (!url) {
+      toast.error('Please enter your LinkedIn profile URL first.')
+      return
+    }
+    if (!url.toLowerCase().includes('linkedin.com')) {
+      toast.error('Invalid LinkedIn URL. Must contain linkedin.com')
+      return
+    }
+    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+      url = `https://${url}`
+      setForm(prev => ({ ...prev, linkedinLink: url }))
+    }
+    window.open(url, '_blank', 'noopener,noreferrer')
+    setLinkedinVerified(true)
+    toast.success('Opening LinkedIn profile to verify...')
+  }
+
+  const handleVerifyGithub = () => {
+    let url = form.githubLink?.trim()
+    if (!url) {
+      toast.error('Please enter your GitHub profile URL or username first.')
+      return
+    }
+    if (!url.toLowerCase().includes('github.com')) {
+      url = `https://github.com/${url.replace(/^@/, '')}`
+      setForm(prev => ({ ...prev, githubLink: url }))
+    } else if (!url.startsWith('http://') && !url.startsWith('https://')) {
+      url = `https://${url}`
+      setForm(prev => ({ ...prev, githubLink: url }))
+    }
+    window.open(url, '_blank', 'noopener,noreferrer')
+    setGithubVerified(true)
+    toast.success('Opening GitHub profile to verify...')
   }
 
   const openAvatarModal = () => {
@@ -165,9 +202,8 @@ export default function StudentProfilePage() {
         name: form.name,
         rollNumber: form.rollNumber,
         department: form.department,
-        domain: form.domain,
+        yearOfStudy: form.yearOfStudy,
         bio: form.bio,
-        contactNo: form.contactNo,
         avatarUrl: form.avatarUrl,
         linkedinLink: form.linkedinLink,
         githubLink: form.githubLink,
@@ -184,8 +220,6 @@ export default function StudentProfilePage() {
         avatarUrl: form.avatarUrl,
         rollNumber: form.rollNumber,
         bio: form.bio,
-        domain: form.domain,
-        contactNo: form.contactNo,
         linkedinLink: form.linkedinLink,
         githubLink: form.githubLink,
         skills: form.skills
@@ -226,17 +260,17 @@ export default function StudentProfilePage() {
       {/* ── Top Page Header ────────────────────────────────────────────── */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl lg:text-3xl font-extrabold text-white tracking-tight flex items-center gap-2.5" style={{ fontFamily: 'Outfit, sans-serif' }}>
+          <h1 className="text-2xl lg:text-3xl font-extrabold text-slate-800 tracking-tight flex items-center gap-2.5" style={{ fontFamily: 'Outfit, sans-serif' }}>
             Student Profile
           </h1>
-          <p className="text-white/40 text-sm mt-1">
+          <p className="text-slate-500 text-sm mt-1">
             View and manage your profile information
           </p>
         </div>
       </div>
 
       {loading ? (
-        <div className="flex flex-col items-center justify-center py-20 gap-3 text-violet-400">
+        <div className="flex flex-col items-center justify-center py-20 gap-3 text-primary-600">
           <Loader2 className="animate-spin" size={36} />
           <span className="text-sm font-medium">Loading profile...</span>
         </div>
@@ -244,25 +278,16 @@ export default function StudentProfilePage() {
         <>
           {/* ── Top Hero Gradient Profile Card ───────────────────────────────── */}
           <div
-            className="relative overflow-hidden rounded-3xl p-6 lg:p-8 border shadow-2xl transition-all duration-300"
-            style={{
-              background: '#0d0720',
-              backgroundImage: 'radial-gradient(ellipse at top right, rgba(124, 58, 237, 0.25), rgba(15, 23, 42, 0.95) 70%), linear-gradient(135deg, #130a2a 0%, #0a1122 100%)',
-              borderColor: 'rgba(139, 92, 246, 0.25)'
-            }}
+            className="relative overflow-hidden rounded-3xl p-6 lg:p-8 border border-blue-100 shadow-sm transition-all duration-300 bg-gradient-to-br from-blue-50/80 via-indigo-50/40 to-slate-50"
           >
-            {/* Background Ambient Glow FX */}
-            <div className="absolute top-0 right-0 w-96 h-96 bg-violet-600/10 rounded-full blur-3xl pointer-events-none" />
-            <div className="absolute bottom-0 left-1/3 w-64 h-64 bg-indigo-600/10 rounded-full blur-3xl pointer-events-none" />
-
             <div className="relative z-10 flex flex-col md:flex-row items-center md:items-start gap-6 lg:gap-8">
               {/* Profile Picture Frame with Camera Upload Button */}
               <div className="relative flex-shrink-0 group">
-                <div className="w-36 h-36 lg:w-44 lg:h-44 rounded-full p-1 bg-gradient-to-tr from-violet-600 via-purple-500 to-indigo-400 shadow-[0_0_30px_rgba(139,92,246,0.35)]">
+                <div className="w-36 h-36 lg:w-44 lg:h-44 rounded-full p-1 bg-gradient-to-tr from-primary-600 via-indigo-500 to-teal shadow-md">
                   <img
                     src={profile.avatarUrl}
                     alt={profile.name}
-                    className="w-full h-full rounded-full object-cover border-4 border-[#0e0720] shadow-inner"
+                    className="w-full h-full rounded-full object-cover border-4 border-white shadow-inner"
                     onError={(e) => {
                       (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=400'
                     }}
@@ -273,7 +298,7 @@ export default function StudentProfilePage() {
                 <button
                   onClick={openAvatarModal}
                   title="Change Profile Photo"
-                  className="absolute bottom-1 right-1 lg:bottom-2 lg:right-2 w-10 h-10 rounded-full bg-violet-600 hover:bg-violet-500 text-white border-2 border-[#0e0720] shadow-lg flex items-center justify-center cursor-pointer transition-transform duration-200 hover:scale-110 active:scale-95 group-hover:shadow-[0_0_15px_rgba(139,92,246,0.5)]"
+                  className="absolute bottom-1 right-1 lg:bottom-2 lg:right-2 w-10 h-10 rounded-full bg-primary-600 hover:bg-primary-700 text-white border-2 border-white shadow-md flex items-center justify-center cursor-pointer transition-transform duration-200 hover:scale-110 active:scale-95"
                 >
                   <Camera size={18} />
                 </button>
@@ -284,65 +309,65 @@ export default function StudentProfilePage() {
                 {/* Name & Role Badge */}
                 <div className="space-y-2">
                   <div className="flex flex-col md:flex-row items-center md:items-baseline gap-3">
-                    <h2 className="text-2xl lg:text-3xl font-extrabold text-white tracking-wide" style={{ fontFamily: 'Outfit, sans-serif' }}>
+                    <h2 className="text-2xl lg:text-3xl font-extrabold text-slate-800 tracking-wide" style={{ fontFamily: 'Outfit, sans-serif' }}>
                       {profile.name}
                     </h2>
-                    <span className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full text-xs font-semibold bg-violet-500/20 text-violet-300 border border-violet-500/30 shadow-sm" style={{ fontFamily: 'Outfit, sans-serif' }}>
+                    <span className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full text-xs font-semibold bg-primary-100 text-primary-800 border border-primary-200 shadow-2xs" style={{ fontFamily: 'Outfit, sans-serif' }}>
                       <GraduationCap size={14} />
                       {profile.role}
                     </span>
                   </div>
                 </div>
 
-                {/* Sub-info Grid (Fixed Truncation Issue with responsive full text) */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 pt-2 border-t border-white/10">
+                {/* Sub-info Grid */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 pt-2 border-t border-slate-200/80">
                   {/* Reg No */}
-                  <div className="flex items-center gap-3 p-3 rounded-xl bg-white/[0.03] border border-white/5">
-                    <div className="w-10 h-10 rounded-xl bg-violet-500/15 border border-violet-500/20 flex items-center justify-center text-violet-400 flex-shrink-0">
+                  <div className="flex items-center gap-3 p-3 rounded-xl bg-white border border-slate-200 shadow-2xs">
+                    <div className="w-10 h-10 rounded-xl bg-primary-50 border border-primary-100 flex items-center justify-center text-primary-600 flex-shrink-0">
                       <Contact size={19} />
                     </div>
                     <div className="min-w-0 text-left">
-                      <div className="text-[11px] font-medium text-white/40 uppercase tracking-wider">Reg. No.</div>
-                      <div className="text-sm font-bold text-white leading-tight break-words" style={{ fontFamily: 'Outfit, sans-serif' }}>
+                      <div className="text-[11px] font-medium text-slate-400 uppercase tracking-wider">Reg. No.</div>
+                      <div className="text-sm font-bold text-slate-800 leading-tight break-words" style={{ fontFamily: 'Outfit, sans-serif' }}>
                         {profile.rollNumber}
                       </div>
                     </div>
                   </div>
 
                   {/* Department */}
-                  <div className="flex items-center gap-3 p-3 rounded-xl bg-white/[0.03] border border-white/5">
-                    <div className="w-10 h-10 rounded-xl bg-violet-500/15 border border-violet-500/20 flex items-center justify-center text-violet-400 flex-shrink-0">
+                  <div className="flex items-center gap-3 p-3 rounded-xl bg-white border border-slate-200 shadow-2xs">
+                    <div className="w-10 h-10 rounded-xl bg-primary-50 border border-primary-100 flex items-center justify-center text-primary-600 flex-shrink-0">
                       <GraduationCap size={19} />
                     </div>
                     <div className="min-w-0 text-left">
-                      <div className="text-[11px] font-medium text-white/40 uppercase tracking-wider">Department</div>
-                      <div className="text-xs sm:text-sm font-bold text-white leading-snug break-words" style={{ fontFamily: 'Outfit, sans-serif' }}>
+                      <div className="text-[11px] font-medium text-slate-400 uppercase tracking-wider">Department</div>
+                      <div className="text-xs sm:text-sm font-bold text-slate-800 leading-snug break-words" style={{ fontFamily: 'Outfit, sans-serif' }}>
                         {profile.department}
                       </div>
                     </div>
                   </div>
 
-                  {/* Domain */}
-                  <div className="flex items-center gap-3 p-3 rounded-xl bg-white/[0.03] border border-white/5">
-                    <div className="w-10 h-10 rounded-xl bg-violet-500/15 border border-violet-500/20 flex items-center justify-center text-violet-400 flex-shrink-0">
-                      <Cpu size={19} />
+                  {/* Year of Study */}
+                  <div className="flex items-center gap-3 p-3 rounded-xl bg-white border border-slate-200 shadow-2xs">
+                    <div className="w-10 h-10 rounded-xl bg-primary-50 border border-primary-100 flex items-center justify-center text-primary-600 flex-shrink-0">
+                      <Award size={19} />
                     </div>
                     <div className="min-w-0 text-left">
-                      <div className="text-[11px] font-medium text-white/40 uppercase tracking-wider">Domain</div>
-                      <div className="text-xs sm:text-sm font-bold text-white leading-snug break-words" style={{ fontFamily: 'Outfit, sans-serif' }}>
-                        {profile.domain}
+                      <div className="text-[11px] font-medium text-slate-400 uppercase tracking-wider">Year of Study</div>
+                      <div className="text-xs sm:text-sm font-bold text-slate-800 leading-snug break-words" style={{ fontFamily: 'Outfit, sans-serif' }}>
+                        Year {profile.yearOfStudy || 3}
                       </div>
                     </div>
                   </div>
 
                   {/* Member Since */}
-                  <div className="flex items-center gap-3 p-3 rounded-xl bg-white/[0.03] border border-white/5">
-                    <div className="w-10 h-10 rounded-xl bg-violet-500/15 border border-violet-500/20 flex items-center justify-center text-violet-400 flex-shrink-0">
+                  <div className="flex items-center gap-3 p-3 rounded-xl bg-white border border-slate-200 shadow-2xs">
+                    <div className="w-10 h-10 rounded-xl bg-primary-50 border border-primary-100 flex items-center justify-center text-primary-600 flex-shrink-0">
                       <Calendar size={19} />
                     </div>
                     <div className="min-w-0 text-left">
-                      <div className="text-[11px] font-medium text-white/40 uppercase tracking-wider">Member since</div>
-                      <div className="text-sm font-bold text-white leading-tight break-words" style={{ fontFamily: 'Outfit, sans-serif' }}>
+                      <div className="text-[11px] font-medium text-slate-400 uppercase tracking-wider">Member since</div>
+                      <div className="text-sm font-bold text-slate-800 leading-tight break-words" style={{ fontFamily: 'Outfit, sans-serif' }}>
                         {profile.memberSince}
                       </div>
                     </div>
@@ -355,27 +380,27 @@ export default function StudentProfilePage() {
           {/* ── 2-Column Grid: Details Cards ─────────────────────────────────── */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Left Card 1: About Me */}
-            <div className="p-6 rounded-2xl border bg-[#081223]/90 border-white/10 shadow-lg space-y-4 hover:border-violet-500/30 transition-colors">
+            <div className="p-6 rounded-2xl border bg-white border-slate-200 shadow-xs space-y-4 hover:border-slate-300 transition-colors">
               <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-xl bg-violet-500/15 border border-violet-500/25 flex items-center justify-center text-violet-300">
+                <div className="w-9 h-9 rounded-xl bg-primary-50 border border-primary-100 flex items-center justify-center text-primary-600">
                   <User size={18} />
                 </div>
-                <h3 className="text-lg font-bold text-white" style={{ fontFamily: 'Outfit, sans-serif' }}>
+                <h3 className="text-lg font-bold text-slate-800" style={{ fontFamily: 'Outfit, sans-serif' }}>
                   About Me
                 </h3>
               </div>
-              <p className="text-white/70 text-sm leading-relaxed font-normal">
+              <p className="text-slate-600 text-sm leading-relaxed font-normal">
                 {profile.bio}
               </p>
             </div>
 
             {/* Right Card 1: Skills */}
-            <div className="p-6 rounded-2xl border bg-[#081223]/90 border-white/10 shadow-lg space-y-4 hover:border-violet-500/30 transition-colors">
+            <div className="p-6 rounded-2xl border bg-white border-slate-200 shadow-xs space-y-4 hover:border-slate-300 transition-colors">
               <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-xl bg-violet-500/15 border border-violet-500/25 flex items-center justify-center text-violet-300">
+                <div className="w-9 h-9 rounded-xl bg-primary-50 border border-primary-100 flex items-center justify-center text-primary-600">
                   <Code2 size={18} />
                 </div>
-                <h3 className="text-lg font-bold text-white" style={{ fontFamily: 'Outfit, sans-serif' }}>
+                <h3 className="text-lg font-bold text-slate-800" style={{ fontFamily: 'Outfit, sans-serif' }}>
                   Skills
                 </h3>
               </div>
@@ -383,10 +408,10 @@ export default function StudentProfilePage() {
                 {profile.skills.map((skill, idx) => (
                   <span
                     key={idx}
-                    className="px-3.5 py-2 rounded-xl bg-violet-950/40 border border-violet-500/25 text-violet-200 text-xs font-semibold flex items-center gap-2 shadow-sm transition-all hover:bg-violet-900/40 hover:border-violet-400/40"
+                    className="px-3.5 py-2 rounded-xl bg-primary-50 border border-primary-100 text-primary-800 text-xs font-semibold flex items-center gap-2 shadow-2xs"
                     style={{ fontFamily: 'Outfit, sans-serif' }}
                   >
-                    <span className="w-1.5 h-1.5 rounded-full bg-violet-400" />
+                    <span className="w-1.5 h-1.5 rounded-full bg-primary-500" />
                     {skill}
                   </span>
                 ))}
@@ -394,38 +419,25 @@ export default function StudentProfilePage() {
             </div>
 
             {/* Left Card 2: Contact Information & Social Profiles */}
-            <div className="p-6 rounded-2xl border bg-[#081223]/90 border-white/10 shadow-lg space-y-5 hover:border-violet-500/30 transition-colors">
+            <div className="p-6 rounded-2xl border bg-white border-slate-200 shadow-xs space-y-5 hover:border-slate-300 transition-colors">
               <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-xl bg-violet-500/15 border border-violet-500/25 flex items-center justify-center text-violet-300">
-                  <Phone size={18} />
+                <div className="w-9 h-9 rounded-xl bg-primary-50 border border-primary-100 flex items-center justify-center text-primary-600">
+                  <Mail size={18} />
                 </div>
-                <h3 className="text-lg font-bold text-white" style={{ fontFamily: 'Outfit, sans-serif' }}>
+                <h3 className="text-lg font-bold text-slate-800" style={{ fontFamily: 'Outfit, sans-serif' }}>
                   Contact Information
                 </h3>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {/* Phone */}
-                <div className="flex items-center gap-3 p-3 rounded-xl bg-white/[0.02] border border-white/5">
-                  <div className="w-10 h-10 rounded-xl bg-violet-500/15 border border-violet-500/20 flex items-center justify-center text-violet-400 flex-shrink-0">
-                    <Phone size={18} />
-                  </div>
-                  <div className="min-w-0">
-                    <div className="text-[11px] font-medium text-white/40 uppercase tracking-wider">Contact No.</div>
-                    <div className="text-sm font-semibold text-white truncate" style={{ fontFamily: 'Outfit, sans-serif' }}>
-                      {profile.contactNo}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Email */}
-                <div className="flex items-center gap-3 p-3 rounded-xl bg-white/[0.02] border border-white/5">
-                  <div className="w-10 h-10 rounded-xl bg-violet-500/15 border border-violet-500/20 flex items-center justify-center text-violet-400 flex-shrink-0">
+              <div>
+                {/* Institutional Email */}
+                <div className="flex items-center gap-3 p-3.5 rounded-xl bg-slate-50 border border-slate-100">
+                  <div className="w-10 h-10 rounded-xl bg-primary-50 border border-primary-100 flex items-center justify-center text-primary-600 flex-shrink-0">
                     <Mail size={18} />
                   </div>
-                  <div className="min-w-0">
-                    <div className="text-[11px] font-medium text-white/40 uppercase tracking-wider">Email ID</div>
-                    <div className="text-sm font-semibold text-white truncate" style={{ fontFamily: 'Outfit, sans-serif' }}>
+                  <div className="min-w-0 flex-1">
+                    <div className="text-[11px] font-medium text-slate-400 uppercase tracking-wider">Institutional Email ID</div>
+                    <div className="text-sm font-semibold text-slate-800 truncate" style={{ fontFamily: 'Outfit, sans-serif' }}>
                       {profile.email}
                     </div>
                   </div>
@@ -433,69 +445,87 @@ export default function StudentProfilePage() {
               </div>
 
               {/* LinkedIn & GitHub Links */}
-              <div className="pt-2 border-t border-white/10 flex flex-col sm:flex-row gap-3">
-                <a
-                  href={profile.linkedinLink}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="flex-1 flex items-center justify-between px-4 py-2.5 rounded-xl bg-blue-600/15 border border-blue-500/30 text-blue-300 hover:bg-blue-600/25 hover:border-blue-400 transition-all text-xs font-semibold"
-                >
-                  <span className="flex items-center gap-2">
-                    <Linkedin size={16} className="text-blue-400" />
-                    LinkedIn Profile
-                  </span>
-                  <ExternalLink size={14} />
-                </a>
+              <div className="pt-2 border-t border-slate-100 flex flex-col sm:flex-row gap-3">
+                {profile.linkedinLink?.trim() ? (
+                  <a
+                    href={profile.linkedinLink.trim().startsWith('http') ? profile.linkedinLink.trim() : `https://${profile.linkedinLink.trim()}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="flex-1 flex items-center justify-between px-4 py-2.5 rounded-xl bg-blue-50 border border-blue-200 text-blue-700 hover:bg-blue-100 transition-all text-xs font-semibold shadow-2xs"
+                  >
+                    <span className="flex items-center gap-2">
+                      <Linkedin size={16} className="text-blue-600" />
+                      LinkedIn Profile
+                    </span>
+                    <ExternalLink size={14} />
+                  </a>
+                ) : (
+                  <div className="flex-1 flex items-center justify-between px-4 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-400 text-xs font-medium select-none">
+                    <span className="flex items-center gap-2">
+                      <Linkedin size={16} className="text-slate-400" />
+                      LinkedIn Not Added
+                    </span>
+                  </div>
+                )}
 
-                <a
-                  href={profile.githubLink}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="flex-1 flex items-center justify-between px-4 py-2.5 rounded-xl bg-white/5 border border-white/15 text-white/80 hover:bg-white/10 hover:border-white/30 transition-all text-xs font-semibold"
-                >
-                  <span className="flex items-center gap-2">
-                    <Github size={16} className="text-white" />
-                    GitHub Profile
-                  </span>
-                  <ExternalLink size={14} />
-                </a>
+                {profile.githubLink?.trim() ? (
+                  <a
+                    href={profile.githubLink.trim().startsWith('http') ? profile.githubLink.trim() : `https://${profile.githubLink.trim()}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="flex-1 flex items-center justify-between px-4 py-2.5 rounded-xl bg-slate-100 border border-slate-300 text-slate-800 hover:bg-slate-200 transition-all text-xs font-semibold shadow-2xs"
+                  >
+                    <span className="flex items-center gap-2">
+                      <Github size={16} className="text-slate-900" />
+                      GitHub Profile
+                    </span>
+                    <ExternalLink size={14} />
+                  </a>
+                ) : (
+                  <div className="flex-1 flex items-center justify-between px-4 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-400 text-xs font-medium select-none">
+                    <span className="flex items-center gap-2">
+                      <Github size={16} className="text-slate-400" />
+                      GitHub Not Added
+                    </span>
+                  </div>
+                )}
               </div>
             </div>
 
-            {/* Right Card 2: Role & Domain */}
-            <div className="p-6 rounded-2xl border bg-[#081223]/90 border-white/10 shadow-lg space-y-4 hover:border-violet-500/30 transition-colors">
+            {/* Right Card 2: Team & Role */}
+            <div className="p-6 rounded-2xl border bg-white border-slate-200 shadow-xs space-y-4 hover:border-slate-300 transition-colors">
               <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-xl bg-violet-500/15 border border-violet-500/25 flex items-center justify-center text-violet-300">
+                <div className="w-9 h-9 rounded-xl bg-primary-50 border border-primary-100 flex items-center justify-center text-primary-600">
                   <Briefcase size={18} />
                 </div>
-                <h3 className="text-lg font-bold text-white" style={{ fontFamily: 'Outfit, sans-serif' }}>
-                  Role & Domain
+                <h3 className="text-lg font-bold text-slate-800" style={{ fontFamily: 'Outfit, sans-serif' }}>
+                  Team & Role
                 </h3>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
                 {/* Role */}
-                <div className="flex items-center gap-3 p-3 rounded-xl bg-white/[0.02] border border-white/5">
-                  <div className="w-10 h-10 rounded-xl bg-violet-500/15 border border-violet-500/20 flex items-center justify-center text-violet-400 flex-shrink-0">
+                <div className="flex items-center gap-3 p-3 rounded-xl bg-slate-50 border border-slate-100">
+                  <div className="w-10 h-10 rounded-xl bg-primary-50 border border-primary-100 flex items-center justify-center text-primary-600 flex-shrink-0">
                     <Briefcase size={18} />
                   </div>
                   <div className="min-w-0">
-                    <div className="text-[11px] font-medium text-white/40 uppercase tracking-wider">Role</div>
-                    <div className="text-sm font-semibold text-white truncate" style={{ fontFamily: 'Outfit, sans-serif' }}>
+                    <div className="text-[11px] font-medium text-slate-400 uppercase tracking-wider">Role</div>
+                    <div className="text-sm font-semibold text-slate-800 truncate" style={{ fontFamily: 'Outfit, sans-serif' }}>
                       {profile.teamRole}
                     </div>
                   </div>
                 </div>
 
-                {/* Domain */}
-                <div className="flex items-center gap-3 p-3 rounded-xl bg-white/[0.02] border border-white/5">
-                  <div className="w-10 h-10 rounded-xl bg-violet-500/15 border border-violet-500/20 flex items-center justify-center text-violet-400 flex-shrink-0">
-                    <Target size={18} />
+                {/* Team Status */}
+                <div className="flex items-center gap-3 p-3 rounded-xl bg-slate-50 border border-slate-100">
+                  <div className="w-10 h-10 rounded-xl bg-primary-50 border border-primary-100 flex items-center justify-center text-primary-600 flex-shrink-0">
+                    <Shield size={18} />
                   </div>
                   <div className="min-w-0">
-                    <div className="text-[11px] font-medium text-white/40 uppercase tracking-wider">Domain</div>
-                    <div className="text-sm font-semibold text-white leading-tight break-words" style={{ fontFamily: 'Outfit, sans-serif' }}>
-                      {profile.domain}
+                    <div className="text-[11px] font-medium text-slate-400 uppercase tracking-wider">Team Status</div>
+                    <div className="text-sm font-semibold text-slate-800 leading-tight break-words" style={{ fontFamily: 'Outfit, sans-serif' }}>
+                      {team?.teamName ? team.teamName : 'Open to Teams'}
                     </div>
                   </div>
                 </div>
@@ -507,11 +537,7 @@ export default function StudentProfilePage() {
           <div className="pt-4 flex justify-center">
             <button
               onClick={openEditModal}
-              className="px-8 py-3.5 rounded-xl text-white font-bold text-sm tracking-wide shadow-glow transition-all duration-200 flex items-center gap-2.5 cursor-pointer hover:scale-105 active:scale-95"
-              style={{
-                background: 'linear-gradient(135deg, #7c3aed 0%, #6366f1 100%)',
-                boxShadow: '0 0 20px rgba(124, 58, 237, 0.4)'
-              }}
+              className="btn-primary px-8 py-3.5 rounded-xl font-bold text-sm tracking-wide shadow-sm flex items-center gap-2.5"
             >
               <Pencil size={17} />
               Edit Profile
@@ -530,34 +556,30 @@ export default function StudentProfilePage() {
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 onClick={() => setAvatarModalOpen(false)}
-                className="absolute inset-0 bg-black/40 backdrop-blur-md"
+                className="absolute inset-0 bg-slate-900/40 backdrop-blur-xs"
               />
 
               <motion.div
                 initial={{ opacity: 0, scale: 0.95, y: 10 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.95, y: 10 }}
-                className="relative w-full max-w-md overflow-hidden rounded-3xl border border-violet-500/30 p-6 lg:p-8 shadow-2xl space-y-6 z-[101]"
-                style={{
-                  background: '#0a101d',
-                  backgroundImage: 'radial-gradient(ellipse at top, rgba(124, 58, 237, 0.2), transparent 70%)'
-                }}
+                className="relative w-full max-w-md overflow-hidden rounded-3xl border border-slate-200 bg-white p-6 lg:p-8 shadow-2xl space-y-6 z-[101]"
               >
-                <div className="flex items-center justify-between border-b border-white/10 pb-4">
+                <div className="flex items-center justify-between border-b border-slate-200 pb-4">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-violet-600/20 border border-violet-500/30 flex items-center justify-center text-violet-300">
+                    <div className="w-10 h-10 rounded-xl bg-primary-50 border border-primary-100 flex items-center justify-center text-primary-600">
                       <Camera size={20} />
                     </div>
                     <div>
-                      <h3 className="text-xl font-bold text-white" style={{ fontFamily: 'Outfit, sans-serif' }}>
+                      <h3 className="text-xl font-bold text-slate-800" style={{ fontFamily: 'Outfit, sans-serif' }}>
                         Change Profile Photo
                       </h3>
-                      <p className="text-white/40 text-xs mt-0.5">Upload or choose a new avatar</p>
+                      <p className="text-slate-500 text-xs mt-0.5">Upload or choose a new avatar</p>
                     </div>
                   </div>
                   <button
                     onClick={() => setAvatarModalOpen(false)}
-                    className="w-8 h-8 rounded-lg flex items-center justify-center text-white/40 hover:text-white hover:bg-white/10 transition-colors"
+                    className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
                   >
                     <X size={20} />
                   </button>
@@ -565,22 +587,22 @@ export default function StudentProfilePage() {
 
                 <form onSubmit={handleSavePhotoOnly} className="space-y-6">
                   <div className="flex flex-col items-center gap-3">
-                    <div className="w-32 h-32 rounded-full p-1 bg-gradient-to-tr from-violet-600 via-purple-500 to-indigo-400 shadow-[0_0_25px_rgba(139,92,246,0.4)]">
+                    <div className="w-32 h-32 rounded-full p-1 bg-gradient-to-tr from-primary-600 via-indigo-500 to-teal shadow-md">
                       <img
                         src={avatarInput}
                         alt="Avatar Preview"
-                        className="w-full h-full rounded-full object-cover border-4 border-[#0e0720]"
+                        className="w-full h-full rounded-full object-cover border-4 border-white"
                         onError={(e) => {
                           (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=400'
                         }}
                       />
                     </div>
-                    <span className="text-xs text-white/40 font-medium">Photo Preview</span>
+                    <span className="text-xs text-slate-500 font-medium">Photo Preview</span>
                   </div>
 
                   <div className="space-y-2">
-                    <label className="text-xs font-semibold text-white/70 flex items-center gap-1.5">
-                      <ImageIcon size={14} className="text-violet-400" />
+                    <label className="text-xs font-semibold text-slate-700 flex items-center gap-1.5">
+                      <ImageIcon size={14} className="text-primary-600" />
                       Quick Choose Preset Avatar
                     </label>
                     <div className="flex justify-center gap-2 pt-1">
@@ -590,7 +612,7 @@ export default function StudentProfilePage() {
                           type="button"
                           onClick={() => setAvatarInput(url)}
                           className={`w-11 h-11 rounded-full p-0.5 transition-all ${
-                            avatarInput === url ? 'ring-2 ring-violet-400 scale-110 shadow-[0_0_12px_rgba(139,92,246,0.6)]' : 'opacity-60 hover:opacity-100 hover:scale-105'
+                            avatarInput === url ? 'ring-2 ring-primary-500 scale-110 shadow-sm' : 'opacity-60 hover:opacity-100 hover:scale-105'
                           }`}
                         >
                           <img src={url} alt={`Preset ${i}`} className="w-full h-full rounded-full object-cover" />
@@ -600,29 +622,29 @@ export default function StudentProfilePage() {
                   </div>
 
                   <div className="space-y-1.5">
-                    <label className="text-xs font-semibold text-white/70">Or Enter Image URL</label>
+                    <label className="text-xs font-semibold text-slate-700">Or Enter Image URL</label>
                     <input
                       type="url"
                       required
                       value={avatarInput}
                       onChange={e => setAvatarInput(e.target.value)}
                       placeholder="https://images.unsplash.com/..."
-                      className="w-full px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white text-sm focus:outline-none focus:border-violet-500/50"
+                      className="input-dark text-sm"
                     />
                   </div>
 
-                  <div className="flex justify-end gap-3 pt-4 border-t border-white/10">
+                  <div className="flex justify-end gap-3 pt-4 border-t border-slate-200">
                     <button
                       type="button"
                       onClick={() => setAvatarModalOpen(false)}
-                      className="px-5 py-2.5 rounded-xl border border-white/10 text-white/70 text-sm font-semibold hover:bg-white/5 transition-all"
+                      className="btn-secondary text-sm"
                     >
                       Cancel
                     </button>
                     <button
                       type="submit"
                       disabled={savingPhoto}
-                      className="px-6 py-2.5 rounded-xl bg-violet-600 hover:bg-violet-500 text-white text-sm font-semibold shadow-glow flex items-center gap-2 transition-all disabled:opacity-50"
+                      className="btn-primary text-sm flex items-center gap-2 disabled:opacity-50"
                     >
                       {savingPhoto ? <Loader2 className="animate-spin" size={16} /> : <Check size={16} />}
                       Save Photo
@@ -646,34 +668,30 @@ export default function StudentProfilePage() {
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 onClick={() => setEditModalOpen(false)}
-                className="absolute inset-0 bg-black/40 backdrop-blur-md"
+                className="absolute inset-0 bg-slate-900/40 backdrop-blur-xs"
               />
 
               <motion.div
                 initial={{ opacity: 0, scale: 0.95, y: 10 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.95, y: 10 }}
-                className="relative w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-3xl border border-violet-500/30 p-6 lg:p-8 shadow-2xl space-y-6 z-[101]"
-                style={{
-                  background: '#0a101d',
-                  backgroundImage: 'radial-gradient(ellipse at top, rgba(124, 58, 237, 0.15), transparent 70%)'
-                }}
+                className="relative w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-3xl border border-slate-200 bg-white p-6 lg:p-8 shadow-2xl space-y-6 z-[101]"
               >
-                <div className="flex items-center justify-between border-b border-white/10 pb-4">
+                <div className="flex items-center justify-between border-b border-slate-200 pb-4">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-violet-600/20 border border-violet-500/30 flex items-center justify-center text-violet-300">
+                    <div className="w-10 h-10 rounded-xl bg-primary-50 border border-primary-100 flex items-center justify-center text-primary-600">
                       <Pencil size={20} />
                     </div>
                     <div>
-                      <h3 className="text-xl font-bold text-white" style={{ fontFamily: 'Outfit, sans-serif' }}>
+                      <h3 className="text-xl font-bold text-slate-800" style={{ fontFamily: 'Outfit, sans-serif' }}>
                         Edit Profile Details
                       </h3>
-                      <p className="text-white/40 text-xs mt-0.5">Update personal info & social profile links</p>
+                      <p className="text-slate-500 text-xs mt-0.5">Update personal info & social profile links</p>
                     </div>
                   </div>
                   <button
                     onClick={() => setEditModalOpen(false)}
-                    className="w-8 h-8 rounded-lg flex items-center justify-center text-white/40 hover:text-white hover:bg-white/10 transition-colors"
+                    className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
                   >
                     <X size={20} />
                   </button>
@@ -682,106 +700,138 @@ export default function StudentProfilePage() {
                 <form onSubmit={handleSaveProfile} className="space-y-5">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-1.5">
-                      <label className="text-xs font-semibold text-white/70">Full Name</label>
+                      <label className="text-xs font-semibold text-slate-700">Full Name</label>
                       <input
                         type="text"
                         required
                         value={form.name}
                         onChange={e => setForm({ ...form, name: e.target.value })}
-                        className="w-full px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white text-sm focus:outline-none focus:border-violet-500/50"
+                        className="input-dark text-sm"
                       />
                     </div>
 
                     <div className="space-y-1.5">
-                      <label className="text-xs font-semibold text-white/70">Reg. No. / Roll Number</label>
+                      <label className="text-xs font-semibold text-slate-700">Reg. No. / Roll Number</label>
                       <input
                         type="text"
                         value={form.rollNumber}
                         onChange={e => setForm({ ...form, rollNumber: e.target.value })}
-                        className="w-full px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white text-sm focus:outline-none focus:border-violet-500/50"
+                        className="input-dark text-sm"
                       />
                     </div>
 
                     <div className="space-y-1.5">
-                      <label className="text-xs font-semibold text-white/70">Department</label>
+                      <label className="text-xs font-semibold text-slate-700">Department</label>
                       <input
                         type="text"
                         value={form.department}
                         onChange={e => setForm({ ...form, department: e.target.value })}
-                        className="w-full px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white text-sm focus:outline-none focus:border-violet-500/50"
+                        className="input-dark text-sm"
                       />
                     </div>
 
                     <div className="space-y-1.5">
-                      <label className="text-xs font-semibold text-white/70">Domain</label>
-                      <input
-                        type="text"
-                        value={form.domain}
-                        onChange={e => setForm({ ...form, domain: e.target.value })}
-                        className="w-full px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white text-sm focus:outline-none focus:border-violet-500/50"
-                      />
+                      <label className="text-xs font-semibold text-slate-700">Year of Study</label>
+                      <select
+                        value={form.yearOfStudy || 3}
+                        onChange={e => setForm({ ...form, yearOfStudy: Number(e.target.value) })}
+                        className="input-dark text-sm"
+                      >
+                        <option value={1}>1st Year</option>
+                        <option value={2}>2nd Year</option>
+                        <option value={3}>3rd Year</option>
+                        <option value={4}>4th Year</option>
+                      </select>
                     </div>
 
                     <div className="space-y-1.5">
-                      <label className="text-xs font-semibold text-white/70">Contact Number</label>
-                      <input
-                        type="text"
-                        value={form.contactNo}
-                        onChange={e => setForm({ ...form, contactNo: e.target.value })}
-                        className="w-full px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white text-sm focus:outline-none focus:border-violet-500/50"
-                      />
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <label className="text-xs font-semibold text-white/70">Email ID</label>
+                      <label className="text-xs font-semibold text-slate-700">Email ID</label>
                       <input
                         type="email"
                         value={form.email}
                         onChange={e => setForm({ ...form, email: e.target.value })}
-                        className="w-full px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white text-sm focus:outline-none focus:border-violet-500/50"
+                        className="input-dark text-sm"
                       />
                     </div>
 
                     {/* Social Profile Links */}
                     <div className="space-y-1.5">
-                      <label className="text-xs font-semibold text-white/70 flex items-center gap-1.5">
-                        <Linkedin size={14} className="text-blue-400" /> LinkedIn URL
-                      </label>
-                      <input
-                        type="url"
-                        value={form.linkedinLink}
-                        onChange={e => setForm({ ...form, linkedinLink: e.target.value })}
-                        placeholder="https://linkedin.com/in/username"
-                        className="w-full px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white text-sm focus:outline-none focus:border-violet-500/50"
-                      />
+                      <div className="flex items-center justify-between">
+                        <label className="text-xs font-semibold text-slate-700 flex items-center gap-1.5">
+                          <Linkedin size={14} className="text-blue-600" /> LinkedIn Profile URL
+                        </label>
+                        {linkedinVerified && (
+                          <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-600">
+                            <CheckCircle2 size={12} /> Verified
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex gap-2">
+                        <input
+                          type="url"
+                          value={form.linkedinLink}
+                          onChange={e => {
+                            setForm({ ...form, linkedinLink: e.target.value })
+                            setLinkedinVerified(false)
+                          }}
+                          placeholder="https://linkedin.com/in/username"
+                          className="input-dark text-sm flex-1"
+                        />
+                        <button
+                          type="button"
+                          onClick={handleVerifyLinkedin}
+                          className="px-3 py-2 rounded-xl text-xs font-semibold border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 transition-all flex items-center gap-1.5 flex-shrink-0 cursor-pointer"
+                        >
+                          <ExternalLink size={13} /> Verify
+                        </button>
+                      </div>
                     </div>
 
                     <div className="space-y-1.5">
-                      <label className="text-xs font-semibold text-white/70 flex items-center gap-1.5">
-                        <Github size={14} className="text-white" /> GitHub URL
-                      </label>
-                      <input
-                        type="url"
-                        value={form.githubLink}
-                        onChange={e => setForm({ ...form, githubLink: e.target.value })}
-                        placeholder="https://github.com/username"
-                        className="w-full px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white text-sm focus:outline-none focus:border-violet-500/50"
-                      />
+                      <div className="flex items-center justify-between">
+                        <label className="text-xs font-semibold text-slate-700 flex items-center gap-1.5">
+                          <Github size={14} className="text-slate-800" /> GitHub Profile URL
+                        </label>
+                        {githubVerified && (
+                          <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-600">
+                            <CheckCircle2 size={12} /> Verified
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex gap-2">
+                        <input
+                          type="url"
+                          value={form.githubLink}
+                          onChange={e => {
+                            setForm({ ...form, githubLink: e.target.value })
+                            setGithubVerified(false)
+                          }}
+                          placeholder="https://github.com/username"
+                          className="input-dark text-sm flex-1"
+                        />
+                        <button
+                          type="button"
+                          onClick={handleVerifyGithub}
+                          className="px-3 py-2 rounded-xl text-xs font-semibold border border-slate-300 bg-slate-100 text-slate-800 hover:bg-slate-200 transition-all flex items-center gap-1.5 flex-shrink-0 cursor-pointer"
+                        >
+                          <ExternalLink size={13} /> Verify
+                        </button>
+                      </div>
                     </div>
                   </div>
 
                   <div className="space-y-1.5">
-                    <label className="text-xs font-semibold text-white/70">About Me (Bio)</label>
+                    <label className="text-xs font-semibold text-slate-700">About Me (Bio)</label>
                     <textarea
                       rows={3}
                       value={form.bio}
                       onChange={e => setForm({ ...form, bio: e.target.value })}
-                      className="w-full px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white text-sm focus:outline-none focus:border-violet-500/50 leading-relaxed"
+                      className="input-dark text-sm resize-none"
                     />
                   </div>
 
                   <div className="space-y-2">
-                    <label className="text-xs font-semibold text-white/70">Technical Skills</label>
+                    <label className="text-xs font-semibold text-slate-700">Technical Skills</label>
                     <div className="flex gap-2">
                       <input
                         type="text"
@@ -794,28 +844,28 @@ export default function StudentProfilePage() {
                           }
                         }}
                         placeholder="Add a new skill (e.g. ROS 2, Python)..."
-                        className="flex-1 px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-white text-sm focus:outline-none focus:border-violet-500/50"
+                        className="input-dark text-sm flex-1"
                       />
                       <button
                         type="button"
                         onClick={handleAddSkill}
-                        className="px-4 py-2 rounded-xl bg-violet-600 hover:bg-violet-500 text-white text-xs font-semibold flex items-center gap-1 transition-all"
+                        className="btn-primary text-xs flex items-center gap-1"
                       >
                         <Plus size={16} /> Add
                       </button>
                     </div>
 
-                    <div className="flex flex-wrap gap-2 pt-2 max-h-36 overflow-y-auto p-2 bg-black/20 rounded-xl border border-white/5">
+                    <div className="flex flex-wrap gap-2 pt-2 max-h-36 overflow-y-auto p-2 bg-slate-50 rounded-xl border border-slate-200">
                       {form.skills.map((skill, idx) => (
                         <span
                           key={idx}
-                          className="px-3 py-1 rounded-lg bg-violet-950/60 border border-violet-500/30 text-violet-200 text-xs font-medium flex items-center gap-2"
+                          className="px-3 py-1 rounded-lg bg-primary-50 border border-primary-200 text-primary-800 text-xs font-medium flex items-center gap-2"
                         >
                           {skill}
                           <button
                             type="button"
                             onClick={() => handleRemoveSkill(skill)}
-                            className="text-violet-400 hover:text-white transition-colors"
+                            className="text-primary-600 hover:text-primary-900 transition-colors"
                           >
                             <X size={13} />
                           </button>
@@ -824,18 +874,18 @@ export default function StudentProfilePage() {
                     </div>
                   </div>
 
-                  <div className="flex justify-end gap-3 pt-4 border-t border-white/10">
+                  <div className="flex justify-end gap-3 pt-4 border-t border-slate-200">
                     <button
                       type="button"
                       onClick={() => setEditModalOpen(false)}
-                      className="px-5 py-2.5 rounded-xl border border-white/10 text-white/70 text-sm font-semibold hover:bg-white/5 transition-all"
+                      className="btn-secondary text-sm"
                     >
                       Cancel
                     </button>
                     <button
                       type="submit"
                       disabled={saving}
-                      className="px-6 py-2.5 rounded-xl bg-violet-600 hover:bg-violet-500 text-white text-sm font-semibold shadow-glow flex items-center gap-2 transition-all disabled:opacity-50"
+                      className="btn-primary text-sm flex items-center gap-2 disabled:opacity-50"
                     >
                       {saving ? <Loader2 className="animate-spin" size={16} /> : <Check size={16} />}
                       Save Changes

@@ -4,7 +4,7 @@
 
 ### AI-Powered Capstone Project Collaboration Platform
 
-**A production-grade, multi-tenant platform for engineering colleges to manage capstone projects end-to-end — team formation, AI mentor matching, milestone tracking, and grading.**
+**A production-grade, institutional platform for engineering colleges to manage capstone projects end-to-end — team formation, AI mentor matching, milestone tracking, and grading.**
 
 [![Version](https://img.shields.io/badge/Version-v1.0.0-blue?logo=git)](https://github.com/sivaprasantht-yuna/Capstone-Project)
 [![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.3.2-brightgreen?logo=springboot)](https://spring.io/projects/spring-boot)
@@ -26,10 +26,10 @@
 ## 📋 Table of Contents
 
 - [What is Skill Sync?](#-what-is-skill-sync)
-- [Architecture](#️-architecture)
+- [Architecture & Tenant Isolation Strategy](#️-architecture--tenant-isolation-strategy)
 - [Why This Stack?](#-why-this-stack)
 - [Design Patterns](#-design-patterns-implemented)
-- [DSA Implementations](#-data-structures--algorithms)
+- [Data Structures & Algorithms](#-data-structures--algorithms)
 - [Features](#-features)
 - [Project Structure](#-project-structure)
 - [Quick Start](#-quick-start-development)
@@ -47,7 +47,7 @@
 
 ## 🏆 What is Skill Sync?
 
-Skill Sync eliminates the manual, chaotic process of capstone project formation in universities. It is a **multi-tenant SaaS platform** — meaning any college can deploy it and onboard their own faculty, students, and projects with zero code changes.
+Skill Sync eliminates the manual, chaotic process of capstone project formation in universities. Built on an **Institutional Dedicated-Deployment Architecture with Role-Based Access Control (RBAC)**, any university or engineering institution can self-host or deploy independent instances to manage their faculty mentors, student teams, and departmental capstone lifecycles with absolute data sovereignty.
 
 | Feature | Description |
 |---|---|
@@ -61,16 +61,18 @@ Skill Sync eliminates the manual, chaotic process of capstone project formation 
 | 🏅 **Gamification** | Points leaderboard awarded on on-time submissions |
 | ⚠️ **At-Risk Detection** | Nightly cron flags inactive teams and notifies mentor |
 | 📄 **PDF Certificates** | iText 8 auto-generated completion certificates with QR verification |
-| 👥 **4 Role Portals** | Student / Faculty / Admin / Industry Partner |
+| 👥 **3 Role Portals** | Student / Faculty Mentor / Department Coordinator & Admin |
 
 ---
 
-## 🏗️ Architecture
+## 🏗️ Architecture & System Design
+
+> 📖 **Comprehensive Design Document:** For complete architectural topologies, sequence diagrams, multi-tenant isolation proofs, and fault-tolerance matrices, see [docs/SYSTEM_DESIGN.md](file:///d:/Programming/S5%20Mini%20Project/docs/SYSTEM_DESIGN.md).
 
 ```
 ┌────────────────────────────────────────────────────────────────────┐
 │                         BROWSER                                    │
-│   React 18 · Vite · TypeScript · Redux · Recharts                 │
+│   React 18 · Vite · TypeScript · Redux Toolkit · Lucide Icons      │
 │                     [Vercel]                                       │
 └──────────────────────┬─────────────────────┬──────────────────────┘
                        │ REST /api/v1         │ WebSocket /ws
@@ -89,6 +91,28 @@ Skill Sync eliminates the manual, chaotic process of capstone project formation 
               │   Cloudinary    │  ← File & PDF uploads (CDN)
               └─────────────────┘
 ```
+
+### 🏢 Tenant Isolation & Data Security Model
+
+Skill Sync employs an **Institutional Single-Tenant / Dedicated-Deployment Model** with **Role-Based Access Control (RBAC)** across Student, Faculty, and Admin personas:
+
+1. **Why Dedicated Institutional Instances?**
+   - **Academic Data Sovereignty & FERPA Compliance:** University student records, evaluations, and grading rubrics are strictly isolated per institution with zero risk of cross-college data leaks or query misconfigurations.
+   - **Zero Noisy-Neighbor Bottlenecks:** Heavy end-of-semester batch grading, cron evaluators, and PDF certificate generation are scoped strictly to one college instance.
+   - **Independent Academic Cycles:** Each institution configures its own department lists, academic years, submission windows, and grading criteria independently.
+
+2. **Roadmap for Shared-Database Multi-Tenant SaaS Extension:**
+   For organizations desiring a single shared database instance across multiple colleges:
+   - **Discriminator Column:** Add `tenant_id UUID` / `college_id` foreign key columns to all 16 core entities (`users`, `teams`, `projects`, etc.).
+   - **PostgreSQL Row-Level Security (RLS):**
+     ```sql
+     ALTER TABLE users ENABLE ROW LEVEL SECURITY;
+     CREATE POLICY tenant_isolation_policy ON users
+       USING (tenant_id = NULLIF(current_setting('app.current_tenant_id', true), '')::uuid);
+     ```
+   - **Hibernate Discriminator Filter / Interceptor:** Inject the active `tenant_id` from the verified JWT claims into the thread-local database session before query execution.
+
+---
 
 ### How PDF AI Processing Works
 
@@ -109,8 +133,8 @@ User uploads PDF  →  Java (PDFBox extracts text, ~5KB)
 | Reason | Detail |
 |---|---|
 | **Strong typing** | Perfect for modelling complex entities: `User`, `Team`, `Mentorship`, `Milestone` |
-| **Spring Security + JWT** | Role-based auth (`STUDENT`, `FACULTY`, `ADMIN`, `INDUSTRY`) |
-| **Spring Data JPA** | Maps Java classes to PostgreSQL tables — no raw SQL for CRUD |
+| **Spring Security + JWT** | Role-based access control (`STUDENT`, `FACULTY`, `ADMIN`) |
+| **Spring Data JPA** | Maps Java classes to PostgreSQL tables with indexed search queries |
 | **Spring WebSocket (STOMP)** | Powers real-time chat and notifications |
 | **Apache PDFBox 3** | Strips raw text from uploaded PDFs locally — no network overhead |
 | **iText 8** | Generates QR-verified completion certificates as PDF |
@@ -118,15 +142,15 @@ User uploads PDF  →  Java (PDFBox extracts text, ~5KB)
 ### 🐍 Python + FastAPI (AI Matching Service — Vercel)
 | Reason | Detail |
 |---|---|
-| **ML ecosystem** | `scikit-learn`, `numpy` — no Java equivalent |
+| **ML ecosystem** | `scikit-learn`, `numpy` — standard machine learning algorithms |
 | **NVIDIA NIM API** | Calls `meta/llama-3.1-8b-instruct` via OpenAI-compatible endpoint |
 | **Serverless fit** | Stateless AI endpoints map perfectly to Vercel functions |
-| **DSA showcase** | Contains `min_heap.py`, `skill_graph.py`, `merge_sort.py` |
+| **Optimized Algorithms** | C-optimized `heapq` top-K selection, Timsort ranking, and Graph BFS |
 
 ### ⚛️ React + TypeScript (Frontend — Vercel)
 | Reason | Detail |
 |---|---|
-| **Component model** | Reusable UI blocks across 4 role-based portals |
+| **Component model** | Reusable UI blocks across 3 role-based portals |
 | **Type safety** | TypeScript mirrors Java's strong-typing philosophy |
 | **Vite** | Sub-second hot reload for fast development |
 
@@ -184,16 +208,61 @@ TeamService.createTeam()
 
 ---
 
-## 🧮 Data Structures & Algorithms
+## 🧠 Core Academic Matching & Optimization Algorithms
 
-| DSA | Language | File | Applied To | Complexity |
+The platform grounds its core intelligence workflows in proven algorithmic literature:
+
+### 1. 🎓 Stable Mentor Allocation — Gale-Shapley Deferred Acceptance (Many-to-One)
+- **Literature & Theoretical Foundation:**
+  - *Gale & Shapley (1962)*, *"College Admissions and the Stability of Marriage"*, American Mathematical Monthly.
+  - *Roth & Shapley (2012 Nobel Prize in Economic Sciences)* for the theory of stable allocations and market design.
+  - *OPRA Framework (arXiv:2005.13714)*, *"Optimal Program Allocation via Stable Matching"*.
+- **Problem Formulation:**
+  - Matches student teams $T = \{t_1, \dots, t_n\}$ to faculty mentors $M = \{m_1, \dots, m_k\}$ where each mentor $m_j$ has capacity $C(m_j)$.
+  - Two-sided preference profiles are generated from skill-overlap dot-products and faculty capacity bounds.
+- **Mathematical Guarantee:**
+  - Provably guarantees a **student-optimal stable matching** in $O(|T| \cdot |M|)$ time.
+  - **Zero Blocking Pairs:** No team $t$ and mentor $m$ exist who would both strictly prefer to be matched to each other over their assigned partners.
+- **Implementation:** `matching-service/services/gale_shapley.py` (`POST /match/mentors/stable-allocation`).
+
+---
+
+### 2. 🤝 Global Classroom Team Formation — Integer Linear Programming (ILP)
+- **Literature & Theoretical Foundation:**
+  - *EDU-TF Framework (arXiv:2506.02756)*, *"Exact and Heuristic Integer Linear Programming for Classroom Team Formation with Real-world Constraints"*.
+  - *Lappas, Liu, & Terzi (KDD 2009)*, *"Finding a Team of Experts in Social Networks"*.
+- **Problem Formulation:**
+  - Given a cohort of $N$ students with skill profiles, partition all students into $M$ teams maximizing global pairwise complementarity:
+    $$\max \sum_{m=1}^{M} \sum_{i < j \in T_m} C(i, j)$$
+    Subject to:
+    1. $\sum_{m=1}^M x_{i, m} = 1 \quad \forall i \in \{1, \dots, N\}$ (**Zero Stragglers Guarantee — 100% placement**).
+    2. $k_{min} \le |T_m| \le k_{max} \quad \forall m$ (**Strict Team Bounds, e.g. 3 to 4 members**).
+- **Implementation:** `matching-service/services/team_partition_ilp.py` (`POST /match/teams/optimal-partition`).
+
+---
+
+### 3. 🔍 Dual-Pass Lexical (TF-IDF) + Semantic Paraphrase Plagiarism Detection
+- **Hierarchical NLP Pipeline:**
+  - **Pass 1 (Lexical):** N-Gram $(1, 2)$ TF-IDF with sublinear term-frequency scaling for rapid, interpretable word-level overlap.
+  - **Pass 2 (Semantic):** Multi-granular dense subword embedding projection capturing conceptual overlap and synonyms (e.g. *"autonomous drone farm obstacle avoidance"* vs *"UAV fruit orchard navigation cameras"*).
+  - **Ensemble Output:** Returns `lexical_score`, `semantic_score`, `hybrid_score`, and match classification (`EXACT_DUPLICATE`, `PARAPHRASED_DUPLICATE`, `THEMATIC_OVERLAP`, `DISTINCT_PROPOSAL`).
+- **Implementation:** `matching-service/routers/idea_similarity.py` (`POST /match/idea-similarity`).
+
+---
+
+## 🧮 Data Structures & Foundational Algorithms
+
+| Algorithm / Structure | Tech / Library | File | Applied To | Complexity |
 |---|---|---|---|---|
-| **Min-Heap / BoundedMaxHeap** | Python | `dsa/min_heap.py` | Top-K candidate extraction | O(N log K) |
+| **Gale-Shapley (Many-to-One)** | Python / Custom | `services/gale_shapley.py` | Stable Mentor-Team Allocation | O(\|T\| · \|M\|) |
+| **ILP Optimal Partitioning** | Python / NumPy | `services/team_partition_ilp.py` | Cohort Team Assembly (Zero Stragglers) | O(N² + Passes · M) |
+| **Dual-Pass TF-IDF + Semantic** | Scikit-Learn / NumPy | `routers/idea_similarity.py` | Proposal Plagiarism & Paraphrase Check | O(\|Corpus\| · L) |
+| **Bounded Min-Heap** | Python `heapq` (C engine) | `dsa/min_heap.py` | Top-K candidate extraction | O(N log K) |
 | **Adjacency List Graph + BFS** | Python | `dsa/skill_graph.py` | Skill bridge discovery | O(V + E) |
-| **DFS** | Python | `dsa/skill_graph.py` | Connected component detection | O(V + E) |
-| **Union-Find (DSU)** | Python | `dsa/skill_graph.py` | Skill cluster detection | O(V · α(V)) |
-| **Merge Sort** | Python + Java | `dsa/merge_sort.py`, `MergeSort.java` | Leaderboard ranking | O(N log N) |
-| **Trie (Prefix Tree)** | Java | `dsa/SkillTrie.java` | Skill autocomplete search | O(L) per query |
+| **DFS & Connected Components** | Python | `dsa/skill_graph.py` | Graph cluster detection | O(V + E) |
+| **Union-Find (DSU)** | Python | `dsa/skill_graph.py` | Disjoint skill set partitioning | O(V · α(V)) |
+| **Stable Sorting** | Python Timsort / Java `List.sort` | `dsa/merge_sort.py`, `MergeSort.java` | Leaderboard multi-key ranking | O(N log N) |
+| **Indexed Prefix & Text Search** | Spring Data JPA / PostgreSQL | `SkillRepository.java`, `SkillTrieService.java` | Skill catalog autocomplete | O(log N + K) |
 
 ---
 
@@ -205,14 +274,14 @@ SkillSync/
 │   └── src/main/java/com/capstone/
 │       ├── config/                  # Security, WebSocket, Swagger, Cache
 │       ├── controller/              # REST Controllers
-│       ├── dsa/                     # MergeSort.java, SkillTrie.java
+│       ├── dsa/                     # MergeSort.java, SkillTrieService.java
 │       ├── events/                  # Domain events (Observer Pattern)
 │       ├── matching/
 │       │   └── MatchingFacade.java  # Facade Pattern
 │       ├── model/                   # JPA entities (16 tables)
 │       ├── notification/
 │       │   └── NotificationRequest.java  # Builder Pattern
-│       ├── repository/              # Spring Data repos
+│       ├── repository/              # Spring Data repos (indexed search)
 │       ├── security/                # JWT filter + UserDetailsService
 │       ├── service/
 │       │   ├── DocumentSanitizerService.java  # PDFBox text extraction
@@ -229,9 +298,9 @@ SkillSync/
 │   │   └── document_sanitizer.py   # NVIDIA NIM text → Markdown
 │   ├── services/cosine_engine.py    # Core ML algorithm
 │   ├── dsa/
-│   │   ├── min_heap.py              # BoundedMaxHeap (Top-K)
+│   │   ├── min_heap.py              # BoundedMaxHeap (Python heapq)
 │   │   ├── skill_graph.py           # Graph + BFS + DFS + Union-Find
-│   │   └── merge_sort.py            # Leaderboard sort
+│   │   └── merge_sort.py            # Stable multi-key ranking
 │   └── requirements.txt
 │
 ├── frontend/                        # React 18 + Vite + TypeScript — Vercel
@@ -239,8 +308,7 @@ SkillSync/
 │       ├── pages/
 │       │   ├── student/             # Dashboard, Teams, Matching, Milestones
 │       │   ├── faculty/             # Dashboard, Grading, Mentorship
-│       │   ├── admin/               # Analytics, Projects, Users
-│       │   └── industry/            # Post projects, Track progress
+│       │   └── admin/               # Analytics, Projects, Users
 │       ├── store/                   # Redux (auth, notifications)
 │       ├── lib/                     # Axios API client, WebSocket client
 │       └── components/              # Shared: PortalLayout, ProtectedRoute
@@ -299,23 +367,25 @@ npm run dev
 
 ---
 
-## 🗄️ Database Setup
+## 🗄️ Database Setup & Flyway Migrations
 
-Skill Sync uses **Hibernate auto-DDL** — tables are created automatically when Spring Boot starts. You only need to seed demo data.
+Skill Sync uses **Flyway versioned migrations** located in `backend/src/main/resources/db/migration/`:
+- `V1__init_schema.sql`: Full canonical multi-tenant schema with `tenant_id` columns, foreign keys, and composite indexes.
+- `V2__seed_initial_data.sql`: Base institutional configuration and mock catalog data.
 
 ### Supabase (Recommended)
 1. Create a project at [supabase.com](https://supabase.com)
 2. Copy your **JDBC connection string** into `DB_URL`
-3. Spring Boot creates all tables on first run
-4. Open **Supabase → SQL Editor** and paste `database/seed.sql`
+3. Spring Boot runs Flyway migrations automatically on startup (`spring.flyway.enabled=true`).
 
 ### Local PostgreSQL
 ```bash
-# Start with Docker
+# Start PostgreSQL container
 docker compose up postgres -d
 
-# Seed demo data (after Spring Boot has run once)
-psql -h localhost -U capstone_user -d capstone_db -f database/seed.sql
+# Start backend — Flyway automatically applies migrations
+cd backend
+mvn spring-boot:run
 ```
 
 ---
@@ -374,12 +444,11 @@ The `sync-to-hf.yml` GitHub Action auto-deploys on every push to `main` that cha
 
 | Role | Email | Password |
 |---|---|---|
-| **Admin** | `admin@capstonehub.app` | `Admin@123` |
-| **Faculty (CSE Head)** | `sasikala.d@demo.capstonehub.app` | `Faculty@123` |
-| **Faculty (AI&DS Head)** | `gomathi.r@demo.capstonehub.app` | `Faculty@123` |
+| **Admin / Coordinator** | `admin@capstonehub.app` | `Admin@123` |
+| **Faculty Mentor (CSE Head)** | `sasikala.d@demo.capstonehub.app` | `Faculty@123` |
+| **Faculty Mentor (AI&DS Head)** | `gomathi.r@demo.capstonehub.app` | `Faculty@123` |
 | **Student (CSE)** | `arjun.selvam@student.demo.capstonehub.app` | `Student@123` |
 | **Student (AI&DS)** | `meena.lakshmi@student.demo.capstonehub.app` | `Student@123` |
-| **Industry Partner** | `partner@technova.com` | `Faculty@123` |
 
 ---
 
@@ -505,7 +574,7 @@ CLOUDINARY_API_SECRET=your_api_secret
 # ── Python Matching Service (Vercel URL) ─────────────────────────
 MATCHING_SERVICE_URL=https://your-python-service.vercel.app
 
-# ── Redis (optional — caching disabled by default) ───────────────
+# ── Redis (optional — caching with Caffeine fallback) ────────────
 REDIS_URL=redis://your-upstash-url:6379
 
 # ── NVIDIA NIM (set in Vercel Python project, not HF) ────────────
@@ -514,19 +583,35 @@ NVIDIA_API_KEY=nvapi-xxxxxxxxxxxxxxxxxxxx
 
 ---
 
-## 🧪 Running Tests
+## 🔒 Secrets Management & Security Architecture
+
+### Zero Hardcoded Secrets Policy
+- **No In-Code Credentials:** All credentials (database connection strings, JWT signing keys, Cloudinary tokens, and NVIDIA NIM API keys) are strictly injected via runtime environment variables or platform secret managers (GitHub Secrets, Hugging Face Space Secrets, Vercel Environment Variables).
+- **Environment Isolation:** Local `.env` files are git-ignored (`.gitignore`) with only sanitized `.env.example` templates committed.
+
+### Key Rotation Protocol
+1. **JWT Secret Rotation:** Generate a new 256-bit Base64 key (`openssl rand -base64 32`). Update `JWT_SECRET` across backend deployment environments. Existing valid tokens expire gracefully within their 24-hour TTL window (`app.jwt.expiration-ms`).
+2. **Database Credential Cycling:** Update password in Supabase/PostgreSQL, update `DB_PASSWORD` secret in HF Spaces, and trigger automated container rolling restart without downtime.
+3. **NVIDIA NIM API Key:** Generate a new key in NVIDIA Build Portal, replace `NVIDIA_API_KEY` in Vercel project settings, and redeploy. The fallback document sanitizer ensures 100% uptime during key swaps.
+
+---
+
+## 🧪 Running Tests & CI Automation
+
+The project includes an automated GitHub Actions CI pipeline (`.github/workflows/ci.yml`) gating pull requests and commits across all 3 modules:
 
 ```bash
-# Python matching service unit tests
+# 1. Python Matching Service Unit Tests (FastAPI + Cosine Engine)
 cd matching-service
 pytest tests/ -v
 
-# Spring Boot backend tests
+# 2. Spring Boot Backend Compilation & Tests (Java 21)
 cd backend
-mvn test
+mvn clean test-compile
 
-# Verify backend compiles
-mvn compile -q
+# 3. React Frontend Build & Typecheck (Vite + TypeScript)
+cd frontend
+npm run build
 ```
 
 ---
@@ -535,7 +620,7 @@ mvn compile -q
 
 ### Current Version: `v1.0.0` (Initial Production Release)
 
-Skill Sync `v1.0.0` is the initial production-ready version designed for multi-tenant deployment across engineering colleges.
+Skill Sync `v1.0.0` is the initial production-ready version designed for institutional deployment across engineering colleges.
 
 #### Module Version Breakdown
 
@@ -548,8 +633,8 @@ Skill Sync `v1.0.0` is the initial production-ready version designed for multi-t
 | **AI LLM Engine** | — | NVIDIA NIM API (`meta/llama-3.1-8b-instruct`) | NVIDIA Build Cloud |
 
 #### Release Highlights (`v1.0.0`)
-- 👥 **Multi-Tenant Role Portals:** Complete portal implementations for 4 distinct user roles: Student, Faculty, Admin, and Industry Partner.
-- 🤝 **AI Skill & Mentor Matching:** Cosine similarity skill-gap algorithm combined with Bounded Max-Heap sorting for complementary student teammate discovery, and workload-penalized mentor matching.
+- 👥 **Role-Based Portals:** Complete portal implementations for 3 distinct user roles: Student, Faculty Mentor, and Department Coordinator/Admin.
+- 🤝 **AI Skill & Mentor Matching:** Cosine similarity skill-gap algorithm combined with C-optimized `heapq` for complementary student teammate discovery, and workload-penalized mentor matching.
 - 🔍 **TF-IDF Plagiarism Detection:** Real-time n-gram TF-IDF vectorizer flagging duplicate capstone project ideas prior to approval.
 - 📄 **Smart PDF Document Sanitizer:** Offloaded local PDF text extraction via Apache PDFBox coupled with NVIDIA NIM (Llama 3.1) text-to-markdown summarization.
 - 💬 **Real-time Messaging & Notifications:** STOMP protocol WebSockets providing instant team chat feeds and personal notification queues.

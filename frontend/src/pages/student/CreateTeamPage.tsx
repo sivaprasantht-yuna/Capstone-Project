@@ -82,7 +82,6 @@ export default function CreateTeamPage() {
           role:         'LEADER',
           department:   user?.department ?? '',
           rollNumber:   '',
-          contactNumber:'',
           techRole:     'Team Leader',
           skills:       form.requiredSkills.slice(0, 3),
           avatarInitial: user?.name?.[0]?.toUpperCase() ?? 'Y',
@@ -104,7 +103,7 @@ export default function CreateTeamPage() {
       {/* ── Back breadcrumb ─────────────────────────────────────────── */}
       <button
         onClick={() => navigate('/student/team')}
-        className="flex items-center gap-2 text-white/40 hover:text-white text-sm mb-6 transition-colors group"
+        className="flex items-center gap-2 text-slate-500 hover:text-slate-800 text-sm mb-6 transition-colors group font-medium"
       >
         <ChevronLeft size={16} className="group-hover:-translate-x-0.5 transition-transform" />
         Team Formation
@@ -113,16 +112,16 @@ export default function CreateTeamPage() {
       {/* ── Page Header ─────────────────────────────────────────────── */}
       <div className="flex items-center gap-3 mb-8">
         <div
-          className="w-11 h-11 rounded-2xl flex items-center justify-center shadow-glow"
+          className="w-11 h-11 rounded-2xl flex items-center justify-center shadow-sm"
           style={{ background: 'linear-gradient(135deg, #1a5fb4, #0e3d80)' }}
         >
           <PlusCircle size={22} className="text-white" />
         </div>
         <div>
-          <h1 className="text-2xl font-bold text-white" style={{ fontFamily: 'Outfit, sans-serif' }}>
+          <h1 className="text-2xl font-bold text-slate-800" style={{ fontFamily: 'Outfit, sans-serif' }}>
             Create Team
           </h1>
-          <p className="text-xs text-white/45">Set up your capstone team — step {step} of {STEPS.length}</p>
+          <p className="text-xs text-slate-500">Set up your capstone team — step {step} of {STEPS.length}</p>
         </div>
       </div>
 
@@ -130,11 +129,8 @@ export default function CreateTeamPage() {
 
         {/* ── Left: Step Progress ──────────────────────────────────── */}
         <div className="lg:col-span-4 space-y-5">
-          <div
-            className="rounded-3xl p-6 border border-white/8"
-            style={{ background: 'rgba(7,25,45,0.7)' }}
-          >
-            <p className="text-xs font-semibold uppercase tracking-widest text-white/40 mb-5">
+          <div className="rounded-3xl p-6 border border-slate-200 bg-white shadow-xs">
+            <p className="text-xs font-semibold uppercase tracking-widest text-slate-500 mb-5">
               Registration Progress
             </p>
             <div className="space-y-5">
@@ -145,18 +141,18 @@ export default function CreateTeamPage() {
                       step > s.step
                         ? 'bg-emerald-500 text-white shadow-sm'
                         : step === s.step
-                        ? 'text-white shadow-glow'
-                        : 'bg-white/5 text-white/25'
+                        ? 'text-white shadow-sm'
+                        : 'bg-slate-100 text-slate-400'
                     }`}
                     style={step === s.step ? { background: 'linear-gradient(135deg, #1a5fb4, #0e3d80)' } : undefined}
                   >
                     {step > s.step ? <Check size={14} /> : s.step}
                   </div>
                   <div>
-                    <div className={`text-sm font-semibold ${step >= s.step ? 'text-white' : 'text-white/30'}`}>
+                    <div className={`text-sm font-semibold ${step >= s.step ? 'text-slate-800' : 'text-slate-400'}`}>
                       {s.title}
                     </div>
-                    <div className="text-xs text-white/30">{s.desc}</div>
+                    <div className="text-xs text-slate-400">{s.desc}</div>
                   </div>
                 </div>
               ))}
@@ -164,17 +160,14 @@ export default function CreateTeamPage() {
           </div>
 
           {/* Info panel */}
-          <div
-            className="rounded-3xl p-5 border border-primary-500/15"
-            style={{ background: 'rgba(26,95,180,0.06)' }}
-          >
+          <div className="rounded-3xl p-5 border border-primary-100 bg-primary-50/50">
             <div className="flex items-center gap-2 mb-3">
-              <Lock size={14} className="text-primary-400" />
-              <span className="text-xs font-semibold text-primary-300 uppercase tracking-wider">
+              <Lock size={14} className="text-primary-600" />
+              <span className="text-xs font-semibold text-primary-700 uppercase tracking-wider">
                 Permanent Fields
               </span>
             </div>
-            <p className="text-xs text-white/45 leading-relaxed">
+            <p className="text-xs text-slate-600 leading-relaxed">
               Team Name and Project Domains are locked after creation. Choose carefully. Max team size and required skills can be updated later.
             </p>
           </div>
@@ -182,10 +175,7 @@ export default function CreateTeamPage() {
 
         {/* ── Right: Form ─────────────────────────────────────────── */}
         <div className="lg:col-span-8">
-          <div
-            className="rounded-3xl p-8 border border-white/8"
-            style={{ background: 'rgba(7,25,45,0.7)' }}
-          >
+          <div className="rounded-3xl p-8 border border-slate-200 bg-white shadow-xs">
             <AnimatePresence mode="wait">
 
               {/* Step 1: Basic Info */}
@@ -198,15 +188,15 @@ export default function CreateTeamPage() {
                   className="space-y-6"
                 >
                   <div>
-                    <h2 className="text-lg font-bold text-white mb-1" style={{ fontFamily: 'Outfit, sans-serif' }}>
+                    <h2 className="text-lg font-bold text-slate-800 mb-1" style={{ fontFamily: 'Outfit, sans-serif' }}>
                       Team Info & Domains
                     </h2>
-                    <p className="text-xs text-white/40">Set your team identity. These fields are permanent after creation.</p>
+                    <p className="text-xs text-slate-500">Set your team identity. These fields are permanent after creation.</p>
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold uppercase tracking-wider text-white/60 mb-2">
-                      Team Name * <span className="text-white/30 normal-case">(permanent)</span>
+                    <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-2">
+                      Team Name * <span className="text-slate-400 normal-case">(permanent)</span>
                     </label>
                     <input
                       type="text"
@@ -216,14 +206,14 @@ export default function CreateTeamPage() {
                       className="input-dark"
                       autoFocus
                     />
-                    <p className="text-[11px] text-white/30 mt-1.5">
+                    <p className="text-[11px] text-slate-500 mt-1.5">
                       🔒 Choose carefully — this cannot be changed after creation.
                     </p>
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold uppercase tracking-wider text-white/60 mb-2">
-                      Maximum Team Size <span className="text-white/30 normal-case">(2–6 members, includes you)</span>
+                    <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-2">
+                      Maximum Team Size <span className="text-slate-400 normal-case">(2–6 members, includes you)</span>
                     </label>
                     <div className="flex items-center gap-4">
                       {[2, 3, 4, 5, 6].map(n => (
@@ -233,10 +223,10 @@ export default function CreateTeamPage() {
                           onClick={() => setForm({ ...form, maxTeamCount: n })}
                           className={`w-11 h-11 rounded-xl font-bold text-sm transition-all border ${
                             form.maxTeamCount === n
-                              ? 'border-primary-500 text-white shadow-glow'
-                              : 'border-white/10 text-white/40 hover:border-white/30 hover:text-white'
+                              ? 'border-primary-500 text-white shadow-sm'
+                              : 'border-slate-200 text-slate-600 hover:border-slate-300 hover:bg-slate-50'
                           }`}
-                          style={form.maxTeamCount === n ? { background: 'linear-gradient(135deg, #1a5fb4, #0e3d80)' } : { background: 'rgba(255,255,255,0.04)' }}
+                          style={form.maxTeamCount === n ? { background: 'linear-gradient(135deg, #1a5fb4, #0e3d80)' } : { background: '#f8fafc' }}
                         >
                           {n}
                         </button>
@@ -275,10 +265,10 @@ export default function CreateTeamPage() {
                   className="space-y-6"
                 >
                   <div>
-                    <h2 className="text-lg font-bold text-white mb-1" style={{ fontFamily: 'Outfit, sans-serif' }}>
+                    <h2 className="text-lg font-bold text-slate-800 mb-1" style={{ fontFamily: 'Outfit, sans-serif' }}>
                       Required Skill Requirements
                     </h2>
-                    <p className="text-xs text-white/40">Select the skills your team needs from incoming members.</p>
+                    <p className="text-xs text-slate-500">Select the skills your team needs from incoming members.</p>
                   </div>
 
                   <SkillMultiSelect
@@ -314,14 +304,14 @@ export default function CreateTeamPage() {
                   className="space-y-6"
                 >
                   <div>
-                    <h2 className="text-lg font-bold text-white mb-1" style={{ fontFamily: 'Outfit, sans-serif' }}>
+                    <h2 className="text-lg font-bold text-slate-800 mb-1" style={{ fontFamily: 'Outfit, sans-serif' }}>
                       Project Focus / Aim
                     </h2>
-                    <p className="text-xs text-white/40">Describe your project objective in 2–3 concise sentences. This appears on your Team Portal.</p>
+                    <p className="text-xs text-slate-500">Describe your project objective in 2–3 concise sentences. This appears on your Team Portal.</p>
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold uppercase tracking-wider text-white/60 mb-2">
+                    <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-2">
                       Project Objective *
                     </label>
                     <textarea
@@ -331,7 +321,7 @@ export default function CreateTeamPage() {
                       placeholder="e.g. Developing an AI-assisted autonomous agriculture monitoring system to improve crop productivity using IoT and Computer Vision..."
                       className="input-dark resize-none"
                     />
-                    <p className="text-[11px] text-white/30 mt-1.5">
+                    <p className="text-[11px] text-slate-500 mt-1.5">
                       {form.projectFocus.trim().length} / min 10 characters
                     </p>
                   </div>
@@ -362,29 +352,26 @@ export default function CreateTeamPage() {
                   className="space-y-6"
                 >
                   <div>
-                    <h2 className="text-lg font-bold text-white mb-1" style={{ fontFamily: 'Outfit, sans-serif' }}>
+                    <h2 className="text-lg font-bold text-slate-800 mb-1" style={{ fontFamily: 'Outfit, sans-serif' }}>
                       Review & Confirm
                     </h2>
-                    <p className="text-xs text-white/40">Double-check your team details before locking them in.</p>
+                    <p className="text-xs text-slate-500">Double-check your team details before locking them in.</p>
                   </div>
 
-                  <div
-                    className="rounded-2xl p-5 border border-white/8 space-y-5"
-                    style={{ background: 'rgba(255,255,255,0.03)' }}
-                  >
+                  <div className="rounded-2xl p-5 border border-slate-200 bg-slate-50/70 space-y-5">
                     <div className="grid grid-cols-2 gap-4 text-sm">
                       <div>
-                        <span className="text-white/40 text-xs block mb-0.5">Team Name</span>
-                        <span className="font-bold text-white">{form.teamName}</span>
+                        <span className="text-slate-500 text-xs block mb-0.5">Team Name</span>
+                        <span className="font-bold text-slate-800">{form.teamName}</span>
                       </div>
                       <div>
-                        <span className="text-white/40 text-xs block mb-0.5">Max Team Size</span>
-                        <span className="font-bold text-white">{form.maxTeamCount} Members</span>
+                        <span className="text-slate-500 text-xs block mb-0.5">Max Team Size</span>
+                        <span className="font-bold text-slate-800">{form.maxTeamCount} Members</span>
                       </div>
                     </div>
 
                     <div>
-                      <span className="text-white/40 text-xs block mb-1.5">Project Domains</span>
+                      <span className="text-slate-500 text-xs block mb-1.5">Project Domains</span>
                       <div className="flex flex-wrap gap-1.5">
                         {form.domains.map(d => (
                           <span key={d} className="badge badge-teal">{d}</span>
@@ -393,7 +380,7 @@ export default function CreateTeamPage() {
                     </div>
 
                     <div>
-                      <span className="text-white/40 text-xs block mb-1.5">Required Skills</span>
+                      <span className="text-slate-500 text-xs block mb-1.5">Required Skills</span>
                       <div className="flex flex-wrap gap-1.5">
                         {form.requiredSkills.map(s => (
                           <span key={s} className="badge badge-accent">{s}</span>
@@ -402,15 +389,15 @@ export default function CreateTeamPage() {
                     </div>
 
                     <div>
-                      <span className="text-white/40 text-xs block mb-1.5">Project Focus</span>
-                      <p className="text-sm text-white/75 leading-relaxed">{form.projectFocus}</p>
+                      <span className="text-slate-500 text-xs block mb-1.5">Project Focus</span>
+                      <p className="text-sm text-slate-700 leading-relaxed">{form.projectFocus}</p>
                     </div>
                   </div>
 
-                  <div className="p-4 rounded-xl border border-amber-500/20 bg-amber-500/5 flex items-start gap-3">
-                    <Lock size={15} className="text-amber-400 flex-shrink-0 mt-0.5" />
-                    <p className="text-xs text-amber-300/80 leading-relaxed">
-                      <strong className="text-amber-300">Team Name and Domains are permanent.</strong> Once created, they cannot be changed. Skills and team size can be updated later.
+                  <div className="p-4 rounded-xl border border-amber-200 bg-amber-50 flex items-start gap-3">
+                    <Lock size={15} className="text-amber-600 flex-shrink-0 mt-0.5" />
+                    <p className="text-xs text-amber-800 leading-relaxed">
+                      <strong className="font-semibold">Team Name and Domains are permanent.</strong> Once created, they cannot be changed. Skills and team size can be updated later.
                     </p>
                   </div>
 

@@ -9,14 +9,12 @@ import {
   Github,
   FileText,
   Sparkles,
-  Upload,
   ExternalLink,
   ShieldCheck,
   AlertTriangle,
   FolderGit2,
   BookOpen,
   CheckCircle2,
-  FileUp,
   RefreshCw,
   Layers,
   Globe
@@ -24,6 +22,7 @@ import {
 import toast from 'react-hot-toast'
 import api from '../../lib/api'
 import CustomSelect from '../../components/CustomSelect'
+import ProjectDocumentationViewer from '../../components/ProjectDocumentationViewer'
 
 interface Project {
   id: number
@@ -34,7 +33,12 @@ interface Project {
   upvoteCount?: number
   status?: string
   postedBy?: { id: number; name: string }
+  sourceType?: 'GITHUB' | 'DOCUMENT' | 'NONE' | string
+  githubRepoUrl?: string
   githubUrl?: string
+  githubReadmeHtml?: string
+  githubLastSyncedAt?: string
+  generatedReadmeMd?: string
   pdfDocumentUrl?: string
   projectOverviewDoc?: string
   similarityScore?: number
@@ -58,9 +62,12 @@ export default function IdeaRepository() {
     description: '',
     domain: '',
     techStack: '',
+    sourceType: 'GITHUB',
+    githubRepoUrl: '',
     githubUrl: '',
     pdfDocumentUrl: '',
-    projectOverviewDoc: ''
+    projectOverviewDoc: '',
+    generatedReadmeMd: ''
   })
 
   // PDF processing state
@@ -68,8 +75,8 @@ export default function IdeaRepository() {
   const [pdfFileName, setPdfFileName] = useState('')
   const [loading, setLoading] = useState(false)
 
-  // Document Overview Modal
-  const [selectedDocProject, setSelectedDocProject] = useState<Project | null>(null)
+  // Document / Readme Viewer Modal
+  const [selectedProject, setSelectedProject] = useState<Project | null>(null)
 
   const fetchData = () => {
     Promise.all([
@@ -78,7 +85,7 @@ export default function IdeaRepository() {
       api.get('/projects/my').catch(() => ({ data: [] }))
     ]).then(([pRes, dRes, myRes]) => {
       setProjects(pRes.data)
-      setDomains(dRes.data)
+      setDomains(Array.isArray(dRes.data) ? [...dRes.data].sort((a: string, b: string) => a.localeCompare(b)) : [])
       setMyProjects(myRes.data)
     })
   }
@@ -98,11 +105,6 @@ export default function IdeaRepository() {
     const file = e.target.files?.[0]
     if (!file) return
 
-    if (!file.name.endsWith('.pdf')) {
-      toast.error('Please select a valid PDF file.')
-      return
-    }
-
     setPdfUploading(true)
     setPdfFileName(file.name)
     const formData = new FormData()
@@ -112,12 +114,14 @@ export default function IdeaRepository() {
       const res = await api.post('/projects/process-pdf', formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       })
-
       const { pdfUrl, projectOverviewDoc } = res.data
+
       setForm(prev => ({
         ...prev,
+        sourceType: 'DOCUMENT',
         pdfDocumentUrl: pdfUrl || '',
         projectOverviewDoc: projectOverviewDoc || '',
+        generatedReadmeMd: projectOverviewDoc || '',
         // Pre-fill description if empty
         description: prev.description || (projectOverviewDoc ? projectOverviewDoc.substring(0, 300) + '...' : '')
       }))
@@ -139,7 +143,14 @@ export default function IdeaRepository() {
 
     setLoading(true)
     try {
-      const res = await api.post('/projects', form)
+      const payload = {
+        ...form,
+        sourceType: postOption === 'github' ? 'GITHUB' : (form.projectOverviewDoc ? 'DOCUMENT' : 'NONE'),
+        githubRepoUrl: postOption === 'github' ? (form.githubRepoUrl || form.githubUrl) : '',
+        githubUrl: postOption === 'github' ? (form.githubRepoUrl || form.githubUrl) : '',
+      }
+
+      const res = await api.post('/projects', payload)
       setProjects(prev => [res.data, ...prev])
       setMyProjects(prev => [res.data, ...prev])
       setShowForm(false)
@@ -148,9 +159,12 @@ export default function IdeaRepository() {
         description: '',
         domain: '',
         techStack: '',
+        sourceType: 'GITHUB',
+        githubRepoUrl: '',
         githubUrl: '',
         pdfDocumentUrl: '',
-        projectOverviewDoc: ''
+        projectOverviewDoc: '',
+        generatedReadmeMd: ''
       })
       setPdfFileName('')
 
@@ -179,30 +193,30 @@ export default function IdeaRepository() {
       {/* ── Top Header ── */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-white flex items-center gap-2" style={{ fontFamily: 'Outfit, sans-serif' }}>
-            <Lightbulb className="text-amber-400" size={24} /> Idea Repository
+          <h1 className="text-2xl font-bold text-slate-800 flex items-center gap-2" style={{ fontFamily: 'Outfit, sans-serif' }}>
+            <Lightbulb className="text-amber-500" size={24} /> Idea Repository
           </h1>
-          <p className="text-white/50 text-sm mt-1">
-            Explore community projects, upload AI-powered overview documents, and connect your GitHub repositories.
+          <p className="text-slate-500 text-sm mt-1">
+            Browse and propose project ideas with unified GitHub README previews and AI-synthesized document overviews.
           </p>
         </div>
         <button
           onClick={() => setShowForm(true)}
-          className="btn-primary text-sm flex items-center gap-2 shadow-lg flex-shrink-0"
+          className="btn-primary text-sm flex items-center gap-2 shadow-xs flex-shrink-0"
         >
           <Plus size={16} /> Post Idea
         </button>
       </div>
 
       {/* ── Navigation Tabs ── */}
-      <div className="flex flex-wrap items-center justify-between gap-4 border-b border-white/10 pb-4">
-        <div className="flex items-center gap-2 p-1 rounded-2xl bg-white/5 border border-white/10">
+      <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 pb-4">
+        <div className="flex items-center gap-2 p-1 rounded-2xl bg-slate-100 border border-slate-200">
           <button
             onClick={() => setActiveTab('reference')}
             className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all ${
               activeTab === 'reference'
-                ? 'bg-primary-600 text-white shadow-md'
-                : 'text-white/60 hover:text-white hover:bg-white/5'
+                ? 'bg-white text-primary-700 shadow-xs border border-slate-200'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/50'
             }`}
           >
             <Globe size={16} /> Reference Repository ({projects.length})
@@ -211,86 +225,96 @@ export default function IdeaRepository() {
             onClick={() => setActiveTab('my')}
             className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all ${
               activeTab === 'my'
-                ? 'bg-primary-600 text-white shadow-md'
-                : 'text-white/60 hover:text-white hover:bg-white/5'
+                ? 'bg-white text-primary-700 shadow-xs border border-slate-200'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/50'
             }`}
           >
             <FolderGit2 size={16} /> My Repository ({myProjects.length})
           </button>
         </div>
 
-        {/* Filters & Search */}
-        <div className="flex flex-wrap gap-3 flex-1 max-w-xl justify-end">
-          <div className="relative flex-1 min-w-44">
-            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white/30" size={15} />
+        {/* Filter Controls */}
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="relative min-w-[220px]">
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
             <input
+              type="text"
+              placeholder="Search projects..."
               value={search}
               onChange={e => setSearch(e.target.value)}
-              placeholder="Search ideas or keywords..."
-              className="input-dark pl-10 text-sm"
+              className="input pl-10 text-sm py-2 bg-white"
             />
           </div>
-          <CustomSelect
-            value={selectedDomain}
-            onChange={setSelectedDomain}
-            options={[
-              { value: '', label: 'All Domains' },
-              ...domains.map(d => ({ value: d, label: d }))
-            ]}
-            placeholder="All Domains"
-            className="w-44"
-          />
+
+          <div className="min-w-[180px]">
+            <CustomSelect
+              options={[{ value: '', label: 'All Domains' }, ...domains.map(d => ({ value: d, label: d }))]}
+              value={selectedDomain}
+              onChange={setSelectedDomain}
+              placeholder="All Domains"
+            />
+          </div>
         </div>
       </div>
 
       {/* ── Project Cards Grid ── */}
       {displayedProjects.length === 0 ? (
-        <div className="flex flex-col items-center justify-center h-64 rounded-3xl border border-dashed border-white/10 text-center p-6">
-          <Lightbulb size={40} className="text-white/20 mb-3" />
-          <h3 className="text-white font-semibold">No project ideas found</h3>
-          <p className="text-white/40 text-sm mt-1 max-w-sm">
-            {activeTab === 'my'
-              ? "You haven't posted any ideas to your repository yet. Click 'Post Idea' to get started."
-              : 'No project ideas match your search criteria.'}
-          </p>
+        <div className="card p-12 text-center text-slate-500 bg-white border border-slate-200">
+          <Lightbulb className="mx-auto text-slate-400 mb-3 opacity-60" size={40} />
+          <p className="font-semibold text-slate-700">No project ideas found</p>
+          <p className="text-sm text-slate-400 mt-1">Try refining your search filters or be the first to submit an idea.</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-          {displayedProjects.map((p, i) => {
-            const isDup = p.similarityFlag || (p.similarityScore && p.similarityScore > 0.7)
-            const simPercent = p.similarityScore ? Math.round(p.similarityScore * 100) : 0
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+          {displayedProjects.map(p => {
+            const isDup = p.similarityFlag
+            const simPercent = Math.round((p.similarityScore || 0) * 100)
+            const isGithub = p.sourceType === 'GITHUB' || Boolean(p.githubRepoUrl || p.githubUrl)
+            const isDoc = p.sourceType === 'DOCUMENT' || Boolean(p.generatedReadmeMd || p.projectOverviewDoc)
 
             return (
               <motion.div
-                key={p.id || i}
-                initial={{ opacity: 0, y: 16 }}
+                key={p.id}
+                initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.04 }}
-                className="glass-card-hover p-5 flex flex-col justify-between h-full border border-white/10 relative overflow-hidden"
+                className="card p-5 border border-slate-200 hover:border-primary-300 hover:shadow-md transition-all flex flex-col justify-between bg-white group cursor-pointer"
+                onClick={() => setSelectedProject(p)}
               >
                 <div>
                   {/* Header badges */}
                   <div className="flex items-start justify-between gap-2 mb-3">
                     <div className="flex flex-wrap items-center gap-1.5">
                       {p.domain && <span className="badge badge-primary text-xs">{p.domain}</span>}
-                      {/* Uniqueness / Duplicate Badge */}
+                      
+                      {/* Source Type Badge */}
+                      {isGithub ? (
+                        <span className="badge bg-slate-900 text-white text-[11px] flex items-center gap-1">
+                          <Github size={11} /> GitHub
+                        </span>
+                      ) : isDoc ? (
+                        <span className="badge bg-blue-50 text-blue-700 border border-blue-200 text-[11px] flex items-center gap-1">
+                          <FileText size={11} /> Document
+                        </span>
+                      ) : null}
+
+                      {/* Uniqueness / Plagiarism Badge */}
                       {isDup ? (
-                        <span className="badge bg-rose-500/15 text-rose-400 border border-rose-500/30 text-[11px] flex items-center gap-1">
+                        <span className="badge bg-rose-50 text-rose-700 border border-rose-200 text-[11px] flex items-center gap-1">
                           <AlertTriangle size={11} /> {simPercent}% Similarity
                         </span>
                       ) : (
-                        <span className="badge bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 text-[11px] flex items-center gap-1">
-                          <ShieldCheck size={11} /> Unique Idea
+                        <span className="badge bg-emerald-50 text-emerald-700 border border-emerald-200 text-[11px] flex items-center gap-1">
+                          <ShieldCheck size={11} /> Unique
                         </span>
                       )}
                     </div>
                   </div>
 
                   {/* Title & Description */}
-                  <h3 className="font-semibold text-white text-base leading-snug mb-2" style={{ fontFamily: 'Outfit, sans-serif' }}>
+                  <h3 className="font-semibold text-slate-800 text-base leading-snug mb-2 group-hover:text-primary-600 transition-colors" style={{ fontFamily: 'Outfit, sans-serif' }}>
                     {p.title}
                   </h3>
-                  <p className="text-white/55 text-sm line-clamp-3 mb-4 leading-relaxed">{p.description}</p>
+                  <p className="text-slate-600 text-sm line-clamp-3 mb-4 leading-relaxed">{p.description}</p>
 
                   {/* Tech stack */}
                   {p.techStack && (
@@ -305,41 +329,24 @@ export default function IdeaRepository() {
                 </div>
 
                 {/* Bottom Actions & Links */}
-                <div className="pt-3 border-t border-white/8 space-y-3 mt-auto">
-                  {/* Document & Github badges if attached */}
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    {p.githubUrl ? (
-                      <a
-                        href={p.githubUrl}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="inline-flex items-center gap-1.5 text-xs text-white/70 hover:text-white bg-white/5 hover:bg-white/10 px-2.5 py-1 rounded-lg border border-white/10 transition-colors"
-                      >
-                        <Github size={13} className="text-amber-400" /> GitHub Page
-                        <ExternalLink size={10} className="text-white/30" />
-                      </a>
-                    ) : (
-                      <span className="text-xs text-white/30 italic">No GitHub link</span>
-                    )}
-
-                    {p.projectOverviewDoc || p.pdfDocumentUrl ? (
-                      <button
-                        onClick={() => setSelectedDocProject(p)}
-                        className="inline-flex items-center gap-1.5 text-xs font-semibold text-teal-400 hover:text-teal-300 bg-teal-500/10 hover:bg-teal-500/20 px-2.5 py-1 rounded-lg border border-teal-500/20 transition-all"
-                      >
-                        <Sparkles size={12} /> AI Overview Doc
-                      </button>
-                    ) : null}
-                  </div>
-
-                  <div className="flex items-center justify-between text-xs text-white/40 pt-1">
-                    <span>by {p.postedBy?.name || 'Student'}</span>
+                <div className="pt-3 border-t border-slate-100 space-y-3 mt-auto" onClick={e => e.stopPropagation()}>
+                  <div className="flex items-center justify-between gap-2">
                     <button
-                      onClick={() => upvote(p.id)}
-                      className="flex items-center gap-1 text-sm font-semibold text-primary-400 hover:text-primary-300 transition-colors"
+                      onClick={() => setSelectedProject(p)}
+                      className="inline-flex items-center gap-1.5 text-xs font-semibold text-primary-600 hover:text-primary-700 bg-primary-50 hover:bg-primary-100 px-3 py-1.5 rounded-lg border border-primary-200 transition-all"
                     >
-                      <TrendingUp size={14} /> {p.upvoteCount || 0}
+                      <BookOpen size={13} /> View Documentation
                     </button>
+
+                    <div className="flex items-center gap-3">
+                      <span className="text-xs text-slate-400">by {p.postedBy?.name || 'Student'}</span>
+                      <button
+                        onClick={() => upvote(p.id)}
+                        className="flex items-center gap-1 text-xs font-semibold text-slate-600 hover:text-primary-600 transition-colors"
+                      >
+                        <TrendingUp size={13} /> {p.upvoteCount || 0}
+                      </button>
+                    </div>
                   </div>
                 </div>
               </motion.div>
@@ -348,25 +355,24 @@ export default function IdeaRepository() {
         </div>
       )}
 
-      {/* ── Modal 1: Post Idea Modal (Option 1: GitHub / Option 2: Core PDF AI Document) ── */}
+      {/* ── Modal 1: Post Idea Modal ── */}
       <AnimatePresence>
         {showForm && (
-          <div className="fixed inset-0 bg-transparent flex items-center justify-center z-50 p-4">
+          <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center z-50 p-4">
             <motion.div
               initial={{ scale: 0.94, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.94, opacity: 0 }}
-              className="glass-card w-full max-w-xl p-6 border border-white/15 shadow-2xl relative max-h-[90vh] overflow-y-auto custom-scrollbar"
-              style={{ background: 'rgba(10, 25, 45, 0.94)' }}
+              className="card w-full max-w-xl p-6 border border-slate-200 shadow-2xl relative max-h-[90vh] overflow-y-auto custom-scrollbar bg-white"
             >
-              <div className="flex items-center justify-between mb-5 border-b border-white/10 pb-3">
+              <div className="flex items-center justify-between mb-5 border-b border-slate-200 pb-3">
                 <div>
-                  <h2 className="font-bold text-white text-lg flex items-center gap-2" style={{ fontFamily: 'Outfit, sans-serif' }}>
-                    <Lightbulb className="text-amber-400" size={20} /> Add to Idea Repository
+                  <h2 className="font-bold text-slate-800 text-lg flex items-center gap-2" style={{ fontFamily: 'Outfit, sans-serif' }}>
+                    <Lightbulb className="text-amber-500" size={20} /> Add to Idea Repository
                   </h2>
-                  <p className="text-xs text-white/40 mt-0.5">Post a student project with GitHub or upload a PDF for AI overview document</p>
+                  <p className="text-xs text-slate-500 mt-0.5">Post a student project with a GitHub repository or project PDF document</p>
                 </div>
-                <button onClick={() => setShowForm(false)} className="text-white/40 hover:text-white">
+                <button onClick={() => setShowForm(false)} className="text-slate-400 hover:text-slate-600">
                   <X size={18} />
                 </button>
               </div>
@@ -378,14 +384,16 @@ export default function IdeaRepository() {
                   onClick={() => setPostOption('github')}
                   className={`p-3.5 rounded-2xl border text-left flex items-start gap-3 transition-all ${
                     postOption === 'github'
-                      ? 'border-primary-500 bg-primary-500/15 text-white shadow-md'
-                      : 'border-white/10 bg-white/4 text-white/60 hover:border-white/20'
+                      ? 'border-slate-900 bg-slate-900 text-white shadow-xs'
+                      : 'border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700'
                   }`}
                 >
-                  <Github size={20} className={postOption === 'github' ? 'text-primary-400' : 'text-white/40'} />
+                  <Github size={20} className={postOption === 'github' ? 'text-white' : 'text-slate-700'} />
                   <div>
-                    <p className="text-xs font-bold text-white">Option 1: GitHub Page</p>
-                    <p className="text-[11px] text-white/50 mt-0.5">Link student's repository & code</p>
+                    <div className="font-semibold text-xs">GitHub Repository</div>
+                    <div className={`text-[11px] mt-0.5 ${postOption === 'github' ? 'text-slate-300' : 'text-slate-400'}`}>
+                      Paste repo URL to render live README
+                    </div>
                   </div>
                 </button>
 
@@ -394,135 +402,111 @@ export default function IdeaRepository() {
                   onClick={() => setPostOption('pdf')}
                   className={`p-3.5 rounded-2xl border text-left flex items-start gap-3 transition-all ${
                     postOption === 'pdf'
-                      ? 'border-teal-500 bg-teal-500/15 text-white shadow-md'
-                      : 'border-white/10 bg-white/4 text-white/60 hover:border-white/20'
+                      ? 'border-blue-600 bg-blue-600 text-white shadow-xs'
+                      : 'border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700'
                   }`}
                 >
-                  <Sparkles size={20} className={postOption === 'pdf' ? 'text-teal-400' : 'text-white/40'} />
+                  <FileText size={20} className={postOption === 'pdf' ? 'text-white' : 'text-blue-600'} />
                   <div>
-                    <p className="text-xs font-bold text-white">Option 2: Core PDF & AI Overview</p>
-                    <p className="text-[11px] text-white/50 mt-0.5">Upload document for AI analysis</p>
+                    <div className="font-semibold text-xs">Project PDF Document</div>
+                    <div className={`text-[11px] mt-0.5 ${postOption === 'pdf' ? 'text-blue-100' : 'text-slate-400'}`}>
+                      Upload PDF for AI Markdown synthesis
+                    </div>
                   </div>
                 </button>
               </div>
 
               <form onSubmit={submitIdea} className="space-y-4">
                 <div>
-                  <label className="text-xs text-white/50 block mb-1">Project Title *</label>
+                  <label className="text-xs font-semibold text-slate-700 block mb-1">Project Title *</label>
                   <input
-                    value={form.title}
-                    onChange={e => setForm({ ...form, title: e.target.value })}
-                    placeholder="e.g. Autonomous Drone Navigation for Crop Health"
+                    type="text"
                     required
-                    className="input-dark text-sm"
+                    placeholder="e.g. Autonomous Drone Navigation System"
+                    value={form.title}
+                    onChange={e => setForm(prev => ({ ...prev, title: e.target.value }))}
+                    className="input text-sm py-2 bg-white"
                   />
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs font-semibold text-slate-700 block mb-1">Domain</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. IoT, ML/AI, Web"
+                      value={form.domain}
+                      onChange={e => setForm(prev => ({ ...prev, domain: e.target.value }))}
+                      className="input text-sm py-2 bg-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-semibold text-slate-700 block mb-1">Tech Stack</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Python, PyTorch, React"
+                      value={form.techStack}
+                      onChange={e => setForm(prev => ({ ...prev, techStack: e.target.value }))}
+                      className="input text-sm py-2 bg-white"
+                    />
+                  </div>
                 </div>
 
                 <div>
-                  <label className="text-xs text-white/50 block mb-1">Project Description *</label>
+                  <label className="text-xs font-semibold text-slate-700 block mb-1">Description *</label>
                   <textarea
-                    value={form.description}
-                    onChange={e => setForm({ ...form, description: e.target.value })}
-                    placeholder="Provide a high-level summary of problem, solution, and methodology..."
-                    required
                     rows={3}
-                    className="input-dark text-sm resize-none"
+                    required
+                    placeholder="Briefly describe what this project aims to accomplish..."
+                    value={form.description}
+                    onChange={e => setForm(prev => ({ ...prev, description: e.target.value }))}
+                    className="input text-sm py-2 bg-white resize-none"
                   />
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label className="text-xs text-white/50 block mb-1">Domain</label>
-                    <CustomSelect
-                      value={form.domain}
-                      onChange={val => setForm({ ...form, domain: val })}
-                      options={['IoT', 'ML/AI', 'Web', 'Embedded Systems', 'Data Science', 'Robotics', 'Blockchain', 'AR/VR']}
-                      placeholder="Select domain"
-                      className="w-full text-sm"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="text-xs text-white/50 block mb-1">Tech Stack</label>
-                    <input
-                      value={form.techStack}
-                      onChange={e => setForm({ ...form, techStack: e.target.value })}
-                      placeholder="e.g. Python, PyTorch, ROS"
-                      className="input-dark text-sm"
-                    />
-                  </div>
-                </div>
-
-                {/* Option 1: GitHub Page Input */}
-                {postOption === 'github' && (
-                  <div>
-                    <label className="text-xs text-amber-400 font-semibold block mb-1 flex items-center gap-1.5">
-                      <Github size={14} /> Student GitHub Repository / Page Link
+                {/* Conditional Fields based on postOption */}
+                {postOption === 'github' ? (
+                  <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2">
+                    <label className="text-xs font-semibold text-slate-800 flex items-center gap-1.5">
+                      <Github size={14} className="text-slate-800" /> GitHub Repository URL
                     </label>
                     <input
                       type="url"
-                      value={form.githubUrl}
-                      onChange={e => setForm({ ...form, githubUrl: e.target.value })}
-                      placeholder="https://github.com/username/project-repo"
-                      className="input-dark text-sm"
+                      placeholder="https://github.com/owner/repository"
+                      value={form.githubRepoUrl || form.githubUrl}
+                      onChange={e => setForm(prev => ({ ...prev, githubRepoUrl: e.target.value, githubUrl: e.target.value }))}
+                      className="input text-sm py-2 bg-white"
                     />
-                  </div>
-                )}
-
-                {/* Option 2: Core PDF Upload -> AI Overview Document */}
-                {postOption === 'pdf' && (
-                  <div className="p-4 rounded-2xl border border-teal-500/25 bg-teal-500/5 space-y-3">
-                    <label className="text-xs font-semibold text-teal-400 flex items-center gap-1.5">
-                      <Sparkles size={14} /> Upload Core Project Document (PDF)
-                    </label>
-                    <p className="text-[11px] text-white/50">
-                      Upload your project proposal or report. Our AI will automatically extract key text and format a **Project Overview Document**.
+                    <p className="text-[11px] text-slate-500">
+                      Skill Sync will validate the repository and securely fetch its rendered README HTML.
                     </p>
-
+                  </div>
+                ) : (
+                  <div className="p-4 rounded-2xl bg-blue-50/50 border border-blue-200 space-y-3">
+                    <label className="text-xs font-semibold text-blue-900 flex items-center gap-1.5">
+                      <FileText size={14} className="text-blue-600" /> Upload Project Proposal (PDF)
+                    </label>
                     <div className="flex items-center gap-3">
-                      <label className="btn-secondary text-xs flex items-center gap-2 cursor-pointer py-2 px-3 border-teal-500/30">
-                        {pdfUploading ? (
-                          <>
-                            <RefreshCw size={14} className="animate-spin text-teal-400" /> Processing with AI...
-                          </>
-                        ) : (
-                          <>
-                            <FileUp size={14} className="text-teal-400" /> Choose PDF File
-                          </>
-                        )}
+                      <label className="btn-secondary text-xs cursor-pointer inline-flex items-center gap-2 bg-white">
+                        <Sparkles size={13} className="text-blue-600" />
+                        {pdfUploading ? 'Extracting via AI...' : 'Choose PDF File'}
                         <input
                           type="file"
-                          accept=".pdf"
+                          accept="application/pdf"
                           onChange={handlePdfUpload}
                           disabled={pdfUploading}
                           className="hidden"
                         />
                       </label>
-                      {pdfFileName && <span className="text-xs text-white/70 truncate max-w-xs">{pdfFileName}</span>}
+                      {pdfFileName && <span className="text-xs text-slate-700 truncate max-w-xs">{pdfFileName}</span>}
                     </div>
-
-                    {form.projectOverviewDoc && (
-                      <div className="p-3 rounded-xl bg-white/5 border border-white/10 text-xs text-emerald-400 flex items-center gap-2">
-                        <CheckCircle2 size={15} /> AI Project Overview Document Generated Successfully!
-                      </div>
-                    )}
                   </div>
                 )}
 
                 {/* Submit Actions */}
-                <div className="flex gap-3 pt-2">
-                  <button
-                    type="button"
-                    onClick={() => setShowForm(false)}
-                    className="btn-secondary flex-1 text-sm"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={loading || pdfUploading}
-                    className="btn-primary flex-1 text-sm flex items-center justify-center gap-2"
-                  >
+                <div className="flex gap-3 pt-4">
+                  <button type="button" onClick={() => setShowForm(false)} className="btn-secondary flex-1 text-sm">Cancel</button>
+                  <button type="submit" disabled={loading || pdfUploading} className="btn-primary flex-1 text-sm">
                     {loading ? 'Submitting...' : 'Post to Repository'}
                   </button>
                 </div>
@@ -532,71 +516,83 @@ export default function IdeaRepository() {
         )}
       </AnimatePresence>
 
-      {/* ── Modal 2: AI Project Overview Document View ── */}
+      {/* ── Modal 2: Unified Project Documentation Viewer Modal ── */}
       <AnimatePresence>
-        {selectedDocProject && (
-          <div className="fixed inset-0 bg-transparent flex items-center justify-center z-50 p-4">
+        {selectedProject && (
+          <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center z-50 p-4">
             <motion.div
               initial={{ scale: 0.94, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.94, opacity: 0 }}
-              className="glass-card w-full max-w-3xl p-6 border border-white/15 shadow-2xl relative max-h-[85vh] flex flex-col"
-              style={{ background: 'rgba(10, 25, 45, 0.95)' }}
+              className="card w-full max-w-4xl p-6 border border-slate-200 shadow-2xl relative max-h-[88vh] flex flex-col bg-white"
             >
               {/* Header */}
-              <div className="flex items-start justify-between border-b border-white/10 pb-4 mb-4">
+              <div className="flex items-start justify-between border-b border-slate-200 pb-4 mb-4">
                 <div>
                   <div className="flex items-center gap-2 mb-1">
-                    <span className="badge badge-teal text-xs flex items-center gap-1">
-                      <Sparkles size={11} /> Project Overview Document
-                    </span>
-                    {selectedDocProject.domain && (
-                      <span className="badge badge-primary text-xs">{selectedDocProject.domain}</span>
+                    {selectedProject.domain && (
+                      <span className="badge badge-primary text-xs">{selectedProject.domain}</span>
                     )}
+                    {selectedProject.sourceType === 'GITHUB' || selectedProject.githubRepoUrl ? (
+                      <span className="badge bg-slate-900 text-white text-xs flex items-center gap-1">
+                        <Github size={11} /> GitHub Source
+                      </span>
+                    ) : selectedProject.sourceType === 'DOCUMENT' || selectedProject.projectOverviewDoc ? (
+                      <span className="badge bg-blue-100 text-blue-800 text-xs flex items-center gap-1">
+                        <FileText size={11} /> Document Source
+                      </span>
+                    ) : null}
                   </div>
-                  <h2 className="text-xl font-bold text-white" style={{ fontFamily: 'Outfit, sans-serif' }}>
-                    {selectedDocProject.title}
+                  <h2 className="text-xl font-bold text-slate-800" style={{ fontFamily: 'Outfit, sans-serif' }}>
+                    {selectedProject.title}
                   </h2>
-                  <p className="text-xs text-white/40 mt-0.5">by {selectedDocProject.postedBy?.name || 'Student Author'}</p>
+                  <p className="text-xs text-slate-500 mt-0.5">by {selectedProject.postedBy?.name || 'Student Author'}</p>
                 </div>
                 <button
-                  onClick={() => setSelectedDocProject(null)}
-                  className="text-white/40 hover:text-white p-1 rounded-lg hover:bg-white/5 transition-colors"
+                  onClick={() => setSelectedProject(null)}
+                  className="text-slate-400 hover:text-slate-600 p-1 rounded-lg hover:bg-slate-100 transition-colors"
                 >
                   <X size={20} />
                 </button>
               </div>
 
-              {/* Document Content */}
-              <div className="flex-1 overflow-y-auto custom-scrollbar space-y-4 pr-2 text-sm text-white/80 leading-relaxed">
-                {selectedDocProject.projectOverviewDoc ? (
-                  <div className="p-5 rounded-2xl bg-white/4 border border-white/8 space-y-3 font-mono text-xs whitespace-pre-wrap">
-                    {selectedDocProject.projectOverviewDoc}
-                  </div>
-                ) : (
-                  <div className="p-4 rounded-2xl bg-white/4 border border-white/8">
-                    <p className="text-white/60">{selectedDocProject.description}</p>
-                  </div>
-                )}
+              {/* Unified Documentation Viewer Component */}
+              <div className="flex-1 overflow-y-auto custom-scrollbar space-y-4 pr-1">
+                <ProjectDocumentationViewer
+                  projectId={selectedProject.id}
+                  sourceType={selectedProject.sourceType}
+                  githubRepoUrl={selectedProject.githubRepoUrl || selectedProject.githubUrl}
+                  githubReadmeHtml={selectedProject.githubReadmeHtml}
+                  githubLastSyncedAt={selectedProject.githubLastSyncedAt}
+                  generatedReadmeMd={selectedProject.generatedReadmeMd || selectedProject.projectOverviewDoc}
+                  projectOverviewDoc={selectedProject.projectOverviewDoc}
+                  onSyncSuccess={(updatedHtml, syncedAt) => {
+                    setSelectedProject(prev => prev ? {
+                      ...prev,
+                      githubReadmeHtml: updatedHtml,
+                      githubLastSyncedAt: syncedAt
+                    } : null)
+                  }}
+                />
 
                 {/* PDF Original File Download if available */}
-                {selectedDocProject.pdfDocumentUrl && (
+                {selectedProject.pdfDocumentUrl && (
                   <div className="pt-2">
                     <a
-                      href={selectedDocProject.pdfDocumentUrl}
+                      href={selectedProject.pdfDocumentUrl}
                       target="_blank"
                       rel="noreferrer"
-                      className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-teal-500/15 text-teal-300 border border-teal-500/30 hover:bg-teal-500/25 transition-all text-xs font-semibold"
+                      className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 transition-all text-xs font-semibold"
                     >
-                      <FileText size={14} /> Download Original PDF Project Document
+                      <FileText size={14} /> Download Original PDF Proposal
                       <ExternalLink size={11} />
                     </a>
                   </div>
                 )}
               </div>
 
-              <div className="pt-4 border-t border-white/10 flex justify-end">
-                <button onClick={() => setSelectedDocProject(null)} className="btn-secondary text-xs px-5">
+              <div className="pt-4 border-t border-slate-200 flex justify-end">
+                <button onClick={() => setSelectedProject(null)} className="btn-secondary text-xs px-5">
                   Close
                 </button>
               </div>

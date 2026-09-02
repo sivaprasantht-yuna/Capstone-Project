@@ -4,13 +4,13 @@ export interface AuthUser {
   userId: number
   name: string
   email: string
-  role: 'STUDENT' | 'FACULTY' | 'ADMIN' | 'INDUSTRY'
+  role: 'STUDENT' | 'FACULTY' | 'ADMIN'
   department?: string
   avatarUrl?: string
   rollNumber?: string
+  yearOfStudy?: number
   bio?: string
   domain?: string
-  contactNo?: string
   linkedinLink?: string
   githubLink?: string
   skills?: string[]

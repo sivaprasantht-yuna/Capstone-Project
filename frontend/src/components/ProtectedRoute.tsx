@@ -21,7 +21,6 @@ export default function ProtectedRoute({ children, allowedRoles }: Props) {
       STUDENT: '/student/dashboard',
       FACULTY: '/faculty/dashboard',
       ADMIN: '/admin/dashboard',
-      INDUSTRY: '/industry/dashboard',
     }
     return <Navigate to={roleRoutes[user.role] || '/login'} replace />
   }

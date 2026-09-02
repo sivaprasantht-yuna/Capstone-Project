@@ -12,7 +12,6 @@ import RegisterPage from './pages/auth/RegisterPage'
 import StudentPortal from './pages/student/StudentPortal'
 import FacultyPortal from './pages/faculty/FacultyPortal'
 import AdminPortal from './pages/admin/AdminPortal'
-import IndustryPortal from './pages/industry/IndustryPortal'
 
 // Protected Route
 import ProtectedRoute from './components/ProtectedRoute'
@@ -34,7 +33,6 @@ export default function App() {
       case 'STUDENT':   return <Navigate to="/student/dashboard" replace />
       case 'FACULTY':   return <Navigate to="/faculty/dashboard" replace />
       case 'ADMIN':     return <Navigate to="/admin/dashboard" replace />
-      case 'INDUSTRY':  return <Navigate to="/industry/dashboard" replace />
       default:          return <Navigate to="/login" replace />
     }
   }
@@ -66,13 +64,6 @@ export default function App() {
       <Route path="/admin/*" element={
         <ProtectedRoute allowedRoles={['ADMIN']}>
           <AdminPortal />
-        </ProtectedRoute>
-      } />
-
-      {/* Industry Portal */}
-      <Route path="/industry/*" element={
-        <ProtectedRoute allowedRoles={['INDUSTRY']}>
-          <IndustryPortal />
         </ProtectedRoute>
       } />
 

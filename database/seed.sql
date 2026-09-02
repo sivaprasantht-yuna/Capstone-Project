@@ -535,29 +535,11 @@ ON CONFLICT (user_id, skill_id) DO NOTHING;
 
 
 -- =============================================================================
--- 4. INDUSTRY PARTNER (Demo)
--- =============================================================================
-INSERT INTO users (name, email, password_hash, role, department, is_active, created_at, updated_at)
-VALUES (
-  'TechNova Solutions',
-  'partner@technova.com',
-  '$2a$12$kS1u2Hh3kJ4R5m8v9nP0QuELFOBmHkA5fGrZiJ1pYoT8cWxbDsN2.',
-  'INDUSTRY', 'Technology', true, NOW(), NOW()
-) ON CONFLICT (email) DO NOTHING;
-
-
--- =============================================================================
--- 5. DEMO STUDENTS (8 sample students across departments)
+-- 4. DEMO STUDENTS
 -- =============================================================================
 INSERT INTO users (name, email, password_hash, role, department, is_active, created_at, updated_at) VALUES
   ('Arjun Selvam',     'arjun.selvam@student.demo.capstonehub.app',    '$2a$12$kS1u2Hh3kJ4R5m8v9nP0QuELFOBmHkA5fGrZiJ1pYoT8cWxbDsN2.', 'STUDENT', 'CSE',                    true, NOW(), NOW()),
-  ('Meena Lakshmi',    'meena.lakshmi@student.demo.capstonehub.app',   '$2a$12$kS1u2Hh3kJ4R5m8v9nP0QuELFOBmHkA5fGrZiJ1pYoT8cWxbDsN2.', 'STUDENT', 'AI&DS',                   true, NOW(), NOW()),
-  ('Rohith Kumar',     'rohith.kumar@student.demo.capstonehub.app',    '$2a$12$kS1u2Hh3kJ4R5m8v9nP0QuELFOBmHkA5fGrZiJ1pYoT8cWxbDsN2.', 'STUDENT', 'ECE',                    true, NOW(), NOW()),
-  ('Sneha Rajan',      'sneha.rajan@student.demo.capstonehub.app',     '$2a$12$kS1u2Hh3kJ4R5m8v9nP0QuELFOBmHkA5fGrZiJ1pYoT8cWxbDsN2.', 'STUDENT', 'AI&ML',                   true, NOW(), NOW()),
-  ('Karthick Pandi',   'karthick.pandi@student.demo.capstonehub.app',  '$2a$12$kS1u2Hh3kJ4R5m8v9nP0QuELFOBmHkA5fGrZiJ1pYoT8cWxbDsN2.', 'STUDENT', 'IT',                     true, NOW(), NOW()),
-  ('Divya Priya',      'divya.priya@student.demo.capstonehub.app',     '$2a$12$kS1u2Hh3kJ4R5m8v9nP0QuELFOBmHkA5fGrZiJ1pYoT8cWxbDsN2.', 'STUDENT', 'CSE',                    true, NOW(), NOW()),
-  ('Sanjay Murugan',   'sanjay.murugan@student.demo.capstonehub.app',  '$2a$12$kS1u2Hh3kJ4R5m8v9nP0QuELFOBmHkA5fGrZiJ1pYoT8cWxbDsN2.', 'STUDENT', 'EEE',                    true, NOW(), NOW()),
-  ('Lakshana Devi',    'lakshana.devi@student.demo.capstonehub.app',   '$2a$12$kS1u2Hh3kJ4R5m8v9nP0QuELFOBmHkA5fGrZiJ1pYoT8cWxbDsN2.', 'STUDENT', 'Biotechnology',           true, NOW(), NOW())
+  ('Meena Lakshmi',    'meena.lakshmi@student.demo.capstonehub.app',   '$2a$12$kS1u2Hh3kJ4R5m8v9nP0QuELFOBmHkA5fGrZiJ1pYoT8cWxbDsN2.', 'STUDENT', 'AI&DS',                   true, NOW(), NOW())
 ON CONFLICT (email) DO NOTHING;
 
 -- Student Profiles
@@ -565,12 +547,6 @@ INSERT INTO student_profiles (user_id, year_of_study, github_link)
 SELECT u.id, 4, 'https://github.com/arjun-selvam'
   FROM users u WHERE u.email = 'arjun.selvam@student.demo.capstonehub.app' ON CONFLICT (user_id) DO NOTHING;
 INSERT INTO student_profiles (user_id, year_of_study) SELECT u.id, 3 FROM users u WHERE u.email = 'meena.lakshmi@student.demo.capstonehub.app'   ON CONFLICT (user_id) DO NOTHING;
-INSERT INTO student_profiles (user_id, year_of_study) SELECT u.id, 4 FROM users u WHERE u.email = 'rohith.kumar@student.demo.capstonehub.app'    ON CONFLICT (user_id) DO NOTHING;
-INSERT INTO student_profiles (user_id, year_of_study) SELECT u.id, 3 FROM users u WHERE u.email = 'sneha.rajan@student.demo.capstonehub.app'     ON CONFLICT (user_id) DO NOTHING;
-INSERT INTO student_profiles (user_id, year_of_study) SELECT u.id, 4 FROM users u WHERE u.email = 'karthick.pandi@student.demo.capstonehub.app'  ON CONFLICT (user_id) DO NOTHING;
-INSERT INTO student_profiles (user_id, year_of_study) SELECT u.id, 4 FROM users u WHERE u.email = 'divya.priya@student.demo.capstonehub.app'     ON CONFLICT (user_id) DO NOTHING;
-INSERT INTO student_profiles (user_id, year_of_study) SELECT u.id, 3 FROM users u WHERE u.email = 'sanjay.murugan@student.demo.capstonehub.app'  ON CONFLICT (user_id) DO NOTHING;
-INSERT INTO student_profiles (user_id, year_of_study) SELECT u.id, 4 FROM users u WHERE u.email = 'lakshana.devi@student.demo.capstonehub.app'   ON CONFLICT (user_id) DO NOTHING;
 
 -- Student Skills
 INSERT INTO user_skills (user_id, skill_id, proficiency_level)
@@ -585,45 +561,9 @@ SELECT u.id, s.id, CASE s.skill_name WHEN 'Machine Learning' THEN 4 WHEN 'Data S
     AND s.skill_name IN ('Machine Learning','Data Science','Python','TensorFlow')
 ON CONFLICT (user_id, skill_id) DO NOTHING;
 
-INSERT INTO user_skills (user_id, skill_id, proficiency_level)
-SELECT u.id, s.id, CASE s.skill_name WHEN 'IoT' THEN 4 WHEN 'Embedded C' THEN 4 WHEN 'Arduino' THEN 3 ELSE 2 END
-  FROM users u, skills s WHERE u.email = 'rohith.kumar@student.demo.capstonehub.app'
-    AND s.skill_name IN ('IoT','Embedded C','Arduino','Signal Processing')
-ON CONFLICT (user_id, skill_id) DO NOTHING;
-
-INSERT INTO user_skills (user_id, skill_id, proficiency_level)
-SELECT u.id, s.id, CASE s.skill_name WHEN 'Deep Learning' THEN 4 WHEN 'Computer Vision' THEN 4 WHEN 'Python' THEN 3 ELSE 2 END
-  FROM users u, skills s WHERE u.email = 'sneha.rajan@student.demo.capstonehub.app'
-    AND s.skill_name IN ('Deep Learning','Computer Vision','Python','NLP')
-ON CONFLICT (user_id, skill_id) DO NOTHING;
-
-INSERT INTO user_skills (user_id, skill_id, proficiency_level)
-SELECT u.id, s.id, CASE s.skill_name WHEN 'React' THEN 4 WHEN 'Node.js' THEN 4 WHEN 'MongoDB' THEN 3 ELSE 2 END
-  FROM users u, skills s WHERE u.email = 'karthick.pandi@student.demo.capstonehub.app'
-    AND s.skill_name IN ('React','Node.js','MongoDB','UI/UX Design')
-ON CONFLICT (user_id, skill_id) DO NOTHING;
-
-INSERT INTO user_skills (user_id, skill_id, proficiency_level)
-SELECT u.id, s.id, CASE s.skill_name WHEN 'React' THEN 4 WHEN 'Spring Boot' THEN 4 WHEN 'PostgreSQL' THEN 3 ELSE 2 END
-  FROM users u, skills s WHERE u.email = 'divya.priya@student.demo.capstonehub.app'
-    AND s.skill_name IN ('React','Spring Boot','PostgreSQL','Docker')
-ON CONFLICT (user_id, skill_id) DO NOTHING;
-
-INSERT INTO user_skills (user_id, skill_id, proficiency_level)
-SELECT u.id, s.id, CASE s.skill_name WHEN 'Power Systems' THEN 4 WHEN 'MATLAB' THEN 3 ELSE 2 END
-  FROM users u, skills s WHERE u.email = 'sanjay.murugan@student.demo.capstonehub.app'
-    AND s.skill_name IN ('Power Systems','MATLAB','IoT','PLC / SCADA')
-ON CONFLICT (user_id, skill_id) DO NOTHING;
-
-INSERT INTO user_skills (user_id, skill_id, proficiency_level)
-SELECT u.id, s.id, CASE s.skill_name WHEN 'Bioinformatics' THEN 4 WHEN 'Python' THEN 3 ELSE 1 END
-  FROM users u, skills s WHERE u.email = 'lakshana.devi@student.demo.capstonehub.app'
-    AND s.skill_name IN ('Bioinformatics','Python','Data Science','Genetic Engineering')
-ON CONFLICT (user_id, skill_id) DO NOTHING;
-
 
 -- =============================================================================
--- 6. DEMO PROJECTS (production-relevant problem statements)
+-- 5. DEMO PROJECTS (production-relevant problem statements)
 -- =============================================================================
 INSERT INTO projects (title, description, domain, tech_stack, max_team_size, posted_by, status, is_industry_proposed, upvote_count, created_at, updated_at)
 SELECT 'Smart Agriculture Monitoring System',
@@ -643,8 +583,8 @@ INSERT INTO projects (title, description, domain, tech_stack, max_team_size, pos
 SELECT 'Real-Time Supply Chain Transparency Platform',
   'Blockchain-based platform to track goods from manufacturer to consumer with QR code scanning, tamper-proof audit trails, and supplier dashboards.',
   'Blockchain', 'Ethereum, Solidity, React, Node.js, PostgreSQL', 4,
-  u.id, 'APPROVED', true, 22, NOW(), NOW()
-FROM users u WHERE u.email = 'partner@technova.com' ON CONFLICT DO NOTHING;
+  u.id, 'APPROVED', false, 22, NOW(), NOW()
+FROM users u WHERE u.email = 'admin@capstonehub.app' ON CONFLICT DO NOTHING;
 
 INSERT INTO projects (title, description, domain, tech_stack, max_team_size, posted_by, status, is_industry_proposed, upvote_count, created_at, updated_at)
 SELECT 'Autonomous Campus Navigation Robot',
@@ -657,8 +597,8 @@ INSERT INTO projects (title, description, domain, tech_stack, max_team_size, pos
 SELECT 'Predictive Maintenance for Industrial Machinery',
   'Data analytics platform using vibration sensor data and ML to predict machinery failures. Includes anomaly detection, maintenance scheduling, and downtime cost analysis dashboards.',
   'Data Science', 'Python, TensorFlow, React, PostgreSQL, Docker', 4,
-  u.id, 'APPROVED', true, 16, NOW(), NOW()
-FROM users u WHERE u.email = 'partner@technova.com' ON CONFLICT DO NOTHING;
+  u.id, 'APPROVED', false, 16, NOW(), NOW()
+FROM users u WHERE u.email = 'admin@capstonehub.app' ON CONFLICT DO NOTHING;
 
 INSERT INTO projects (title, description, domain, tech_stack, max_team_size, posted_by, status, is_industry_proposed, upvote_count, created_at, updated_at)
 SELECT 'Bioinformatics Platform for Genomic Research',
@@ -680,7 +620,6 @@ FROM users u WHERE u.email = 'admin@capstonehub.app' ON CONFLICT DO NOTHING;
 -- Admin    : admin@capstonehub.app                        | Admin@123
 -- Faculty  : firstname.lastname@demo.capstonehub.app      | Faculty@123
 -- Students : firstname.lastname@student.demo.capstonehub.app | Student@123
--- Industry : partner@technova.com                         | Faculty@123
 --
 -- TO MIGRATE TO YOUR COLLEGE DOMAIN (run after seeding):
 --   UPDATE users SET email = REPLACE(email, '@demo.capstonehub.app', '@yourcollege.edu')

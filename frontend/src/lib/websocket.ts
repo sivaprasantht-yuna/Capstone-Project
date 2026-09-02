@@ -1,18 +1,28 @@
-import { Client, IMessage } from '@stomp/stompjs'
-import SockJS from 'sockjs-client'
+/**
+ * Native WebSocket client for the Unified FastAPI backend.
+ * Replaces the previous STOMP/SockJS implementation.
+ *
+ * Protocol:
+ *   Connect to  ws://host/ws/chat/{teamId}?token=JWT
+ *   Send/receive JSON messages:
+ *     { type: "CHAT_MESSAGE", content: "...", senderId: N, senderName: "..." }
+ *     { type: "READ_RECEIPT", teamId: N, userId: N }
+ */
+
 import { store } from '../store'
 import { addNotification } from '../store/notificationSlice'
 
-let stompClient: Client | null = null
-let connectAttempts   = 0
+let socket: WebSocket | null = null
+let connectAttempts = 0
 let retryTimer: ReturnType<typeof setTimeout> | null = null
+let currentTeamId: number | null = null
+let messageHandlers: ((msg: ChatMessage) => void)[] = []
 
-const MAX_ATTEMPTS    = 6          // give up after 6 failures (avoids infinite log spam)
-const BASE_DELAY_MS   = 3000       // 3s first retry
-const MAX_DELAY_MS    = 60_000     // cap at 60s
+const MAX_ATTEMPTS  = 6
+const BASE_DELAY_MS = 3000
+const MAX_DELAY_MS  = 60_000
 
 function getBackoffDelay(): number {
-  // Exponential: 3s, 6s, 12s, 24s, 48s, 60s…
   return Math.min(BASE_DELAY_MS * Math.pow(2, connectAttempts), MAX_DELAY_MS)
 }
 
@@ -37,63 +47,64 @@ function scheduleReconnect(userId: number) {
 }
 
 function doConnect(userId: number) {
-  // Avoid duplicate clients
-  if (stompClient?.active) return
+  if (socket && (socket.readyState === WebSocket.OPEN || socket.readyState === WebSocket.CONNECTING)) return
 
   const { user } = store.getState().auth
+  const token = user?.accessToken || ''
 
-  stompClient = new Client({
-    webSocketFactory: () =>
-      new SockJS('/ws', null, { transports: ['websocket', 'xhr-streaming', 'xhr-polling'] }),
-    connectHeaders: {
-      Authorization: `Bearer ${user?.accessToken || ''}`,
-    },
-    // Disable built-in reconnect — we handle it manually with backoff
-    reconnectDelay: 0,
+  // Use the team-specific WebSocket endpoint if we have a teamId, else the generic one
+  const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
+  const wsHost = window.location.host
+  const teamPath = currentTeamId ? `/ws/chat/${currentTeamId}` : '/ws'
+  const wsUrl = `${wsProtocol}//${wsHost}${teamPath}?token=${encodeURIComponent(token)}`
 
-    onConnect: () => {
-      connectAttempts = 0  // reset on success
-      console.log('[WS] Connected to STOMP broker')
+  socket = new WebSocket(wsUrl)
 
-      // Subscribe to user-specific notifications
-      stompClient?.subscribe(
-        `/user/${userId}/queue/notifications`,
-        (message: IMessage) => {
-          try {
-            const notification = JSON.parse(message.body)
-            store.dispatch(addNotification(notification))
-          } catch { /* malformed message */ }
+  socket.onopen = () => {
+    connectAttempts = 0
+    console.log('[WS] Connected to FastAPI WebSocket')
+  }
+
+  socket.onmessage = (event) => {
+    try {
+      const data = JSON.parse(event.data)
+
+      if (data.type === 'NOTIFICATION') {
+        store.dispatch(addNotification(data))
+      } else {
+        // Distribute to all registered message handlers
+        const chatMsg: ChatMessage = {
+          id: data.id,
+          senderId: data.senderId,
+          senderName: data.senderName || 'Unknown',
+          senderAvatar: data.senderAvatar,
+          content: data.content,
+          isRead: data.isRead ?? false,
+          timestamp: data.timestamp || data.createdAt || new Date().toISOString()
         }
-      )
-    },
+        messageHandlers.forEach(handler => handler(chatMsg))
+      }
+    } catch {
+      /* malformed message — ignore */
+    }
+  }
 
-    onStompError: (frame) => {
-      console.warn('[WS] STOMP error:', frame.headers?.message || frame)
-      connectAttempts++
-      scheduleReconnect(userId)
-    },
+  socket.onclose = () => {
+    console.log('[WS] Disconnected')
+    connectAttempts++
+    scheduleReconnect(userId)
+  }
 
-    onWebSocketError: () => {
-      // This fires on ECONNREFUSED / ECONNRESET — suppress the full stack
-      connectAttempts++
-      scheduleReconnect(userId)
-    },
-
-    onDisconnect: () => {
-      console.log('[WS] Disconnected')
-    },
-  })
-
-  stompClient.activate()
+  socket.onerror = () => {
+    // onclose will fire after onerror — reconnect handled there
+  }
 }
 
 export async function connectWebSocket(userId: number): Promise<void> {
-  // Reset state on fresh connect call (e.g. new login)
   connectAttempts = 0
   if (retryTimer) { clearTimeout(retryTimer); retryTimer = null }
-  if (stompClient?.active) { stompClient.deactivate(); stompClient = null }
+  if (socket) { socket.close(); socket = null }
 
-  // Only attempt if backend is up — silently skip if not
   const reachable = await isBackendReachable()
   if (!reachable) {
     console.warn('[WS] Backend not reachable — skipping WebSocket connection.')
@@ -107,39 +118,49 @@ export function subscribeToTeamChat(
   teamId: number,
   onMessage: (msg: ChatMessage) => void
 ): () => void {
-  if (!stompClient?.connected) return () => {}
+  // Store the team id for reconnection and add the handler
+  currentTeamId = teamId
+  messageHandlers.push(onMessage)
 
-  const subscription = stompClient.subscribe(
-    `/topic/team/${teamId}`,
-    (message: IMessage) => {
-      try {
-        const payload: ChatMessage = JSON.parse(message.body)
-        onMessage(payload)
-      } catch { /* malformed */ }
-    }
-  )
+  // If we're connected to a different team (or generic), reconnect to the correct team
+  const { user } = store.getState().auth
+  if (user?.userId) {
+    if (socket) { socket.close(); socket = null }
+    connectAttempts = 0
+    doConnect(Number(user.userId))
+  }
 
-  return () => subscription.unsubscribe()
+  return () => {
+    messageHandlers = messageHandlers.filter(h => h !== onMessage)
+  }
 }
 
 export function sendChatMessage(teamId: number, content: string): void {
-  stompClient?.publish({
-    destination: `/app/chat/${teamId}`,
-    body: JSON.stringify({ content }),
-  })
+  if (socket && socket.readyState === WebSocket.OPEN) {
+    const { user } = store.getState().auth
+    socket.send(JSON.stringify({
+      type: 'CHAT_MESSAGE',
+      content,
+      senderId: user?.userId,
+      senderName: user?.name || 'Unknown'
+    }))
+  }
 }
 
 export function disconnectWebSocket(): void {
   if (retryTimer) { clearTimeout(retryTimer); retryTimer = null }
-  stompClient?.deactivate()
-  stompClient = null
+  messageHandlers = []
+  currentTeamId = null
+  if (socket) { socket.close(); socket = null }
   connectAttempts = 0
 }
 
 export interface ChatMessage {
+  id?: number
   senderId: number
   senderName: string
   senderAvatar?: string
   content: string
+  isRead?: boolean
   timestamp: string
 }

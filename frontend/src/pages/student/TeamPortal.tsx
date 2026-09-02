@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useSelector, useDispatch } from 'react-redux'
@@ -6,11 +6,11 @@ import { useNavigate } from 'react-router-dom'
 import {
   Crown, MailOpen, UserPlus, X, Search, Send,
   CheckCircle, XCircle, Users, Shield, RefreshCw,
-  Phone, BookOpen, Hash, Briefcase, Star, ChevronRight,
+  BookOpen, Hash, Briefcase, Star, ChevronRight,
   Linkedin, Github, ExternalLink, Contact, Mail, AlertTriangle, Code2
 } from 'lucide-react'
 import { RootState } from '../../store'
-import { TeamMember, setTeam } from '../../store/teamSlice'
+import { TeamMember, setTeam, clearTeam } from '../../store/teamSlice'
 import toast from 'react-hot-toast'
 import api from '../../lib/api'
 
@@ -51,40 +51,9 @@ interface StudentProfileFull extends StudentSearchResult {
   }>
 }
 
-// ─── Trie Data Structure for Name Search ─────────────────────────────────────
-class TrieNode {
-  children: Map<string, TrieNode> = new Map()
-  isEnd = false
-  indices: number[] = [] // Indices into the students array
-}
-
-class Trie {
-  private root = new TrieNode()
-
-  insert(word: string, idx: number) {
-    let node = this.root
-    for (const ch of word.toLowerCase()) {
-      if (!node.children.has(ch)) node.children.set(ch, new TrieNode())
-      node = node.children.get(ch)!
-      node.indices.push(idx)
-    }
-    node.isEnd = true
-  }
-
-  /** Returns all student indices whose name starts with the prefix */
-  search(prefix: string): Set<number> {
-    let node = this.root
-    for (const ch of prefix.toLowerCase()) {
-      if (!node.children.has(ch)) return new Set()
-      node = node.children.get(ch)!
-    }
-    return new Set(node.indices)
-  }
-}
-
 // ─── Popup Wrapper ────────────────────────────────────────────────────────────
 function Popup({
-  open, onClose, title, subtitle, icon, hideHeader, children
+  open, onClose, title, subtitle, icon, hideHeader, zIndex = 100, children
 }: {
   open: boolean
   onClose: () => void
@@ -92,94 +61,96 @@ function Popup({
   subtitle?: string
   icon?: React.ReactNode
   hideHeader?: boolean
+  zIndex?: number
   children: React.ReactNode
 }) {
+  if (!open || typeof document === 'undefined') return null
+
   return createPortal(
-    <AnimatePresence>
-      {open && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-          {/* Backdrop */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            onClick={onClose}
-            className="absolute inset-0 bg-black/20 backdrop-blur-sm z-[100]"
-          />
+    <div
+      className="fixed inset-0 flex items-center justify-center p-4"
+      style={{ zIndex }}
+    >
+      {/* Backdrop */}
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        transition={{ duration: 0.15 }}
+        onClick={(e) => {
+          e.stopPropagation()
+          onClose()
+        }}
+        className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs"
+        style={{ zIndex }}
+      />
 
-          {/* Panel */}
-          <motion.div
-            initial={{ opacity: 0, scale: 0.93, y: 24 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.93, y: 24 }}
-            transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
-            className="relative z-[101] flex items-center justify-center w-full pointer-events-none"
-          >
+      {/* Panel */}
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95, y: 16 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.95, y: 16 }}
+        transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
+        className="relative flex items-center justify-center w-full"
+        style={{ zIndex: zIndex + 1 }}
+      >
+        <div
+          className="relative flex flex-col overflow-hidden border border-slate-200 bg-white shadow-2xl rounded-3xl"
+          style={{
+            width: 'min(70vw, 860px)',
+            height: 'min(80vh, 740px)',
+          }}
+          onClick={e => e.stopPropagation()}
+        >
+          {!hideHeader && (
+            /* Header */
             <div
-              className="pointer-events-auto relative flex flex-col overflow-hidden border border-white/12 shadow-2xl"
-              style={{
-                width: 'min(70vw, 860px)',
-                height: 'min(80vh, 740px)',
-                background: 'linear-gradient(145deg, rgba(26,95,180,0.25) 0%, rgba(255,255,255,0.08) 40%, rgba(11,165,165,0.15) 100%), rgba(10, 25, 45, 0.95)',
-                borderRadius: '24px',
-                border: '1px solid rgba(255,255,255,0.15)',
-                boxShadow: '0 32px 80px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.15)',
-              }}
-              onClick={e => e.stopPropagation()}
+              className="flex items-center justify-between px-7 py-5 border-b border-slate-200 flex-shrink-0 bg-slate-50/50"
             >
-              {/* Radial accent glow */}
-              <div
-                className="absolute -top-20 -right-20 w-72 h-72 rounded-full pointer-events-none"
-                style={{ background: 'radial-gradient(circle, rgba(11,165,165,0.12) 0%, transparent 70%)' }}
-              />
-
-              {!hideHeader && (
-                /* Header */
+              <div className="flex items-center gap-3">
                 <div
-                  className="flex items-center justify-between px-7 py-5 border-b flex-shrink-0"
-                  style={{ borderColor: 'rgba(26,95,180,0.15)' }}
+                  className="w-9 h-9 rounded-xl flex items-center justify-center shadow-xs"
+                  style={{ background: 'linear-gradient(135deg, #1a5fb4, #0d9488)' }}
                 >
-                  <div className="flex items-center gap-3">
-                    <div
-                      className="w-9 h-9 rounded-xl flex items-center justify-center"
-                      style={{ background: 'linear-gradient(135deg, #1a5fb4, #0ba5a5)' }}
-                    >
-                      {icon}
-                    </div>
-                    <div>
-                      <h2 className="font-bold text-white text-base" style={{ fontFamily: 'Outfit, sans-serif' }}>
-                        {title}
-                      </h2>
-                      {subtitle && <p className="text-xs text-white/40">{subtitle}</p>}
-                    </div>
-                  </div>
-                  <button
-                    onClick={onClose}
-                    className="w-8 h-8 rounded-lg flex items-center justify-center text-white/40 hover:text-white hover:bg-white/10 transition-all"
-                  >
-                    <X size={18} />
-                  </button>
+                  {icon}
                 </div>
-              )}
-
-              {/* Scrollable body */}
-              <div className="flex-1 overflow-y-auto p-7 no-scrollbar relative">
-                {hideHeader && (
-                  <button
-                    onClick={onClose}
-                    className="absolute top-5 right-5 z-20 w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-white/60 hover:text-white flex items-center justify-center transition-all cursor-pointer"
-                  >
-                    <X size={18} />
-                  </button>
-                )}
-                {children}
+                <div>
+                  <h2 className="font-bold text-slate-800 text-base" style={{ fontFamily: 'Outfit, sans-serif' }}>
+                    {title}
+                  </h2>
+                  {subtitle && <p className="text-xs text-slate-500">{subtitle}</p>}
+                </div>
               </div>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onClose()
+                }}
+                className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-all cursor-pointer"
+              >
+                <X size={18} />
+              </button>
             </div>
-          </motion.div>
+          )}
+
+          {/* Scrollable body */}
+          <div className="flex-1 overflow-y-auto p-7 no-scrollbar relative bg-white">
+            {hideHeader && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onClose()
+                }}
+                className="absolute top-5 right-5 z-20 w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-800 flex items-center justify-center transition-all cursor-pointer shadow-2xs"
+              >
+                <X size={18} />
+              </button>
+            )}
+            {children}
+          </div>
         </div>
-      )}
-    </AnimatePresence>,
+      </motion.div>
+    </div>,
     document.body
   )
 }
@@ -194,19 +165,37 @@ function MemberProfilePopup({
   onRemoveClick?: (member: TeamMember) => void
 }) {
   const isLeader = member?.role === 'LEADER'
+  const [profileData, setProfileData] = useState<StudentSearchResult & { email?: string; bio?: string } | null>(null)
+  const [loading, setLoading] = useState(false)
 
-  // Calculate fallbacks for clean display without dashes
-  const dept = member?.department || 'Mechatronics Engineering'
+  useEffect(() => {
+    if (!member?.id) {
+      setProfileData(null)
+      return
+    }
+    setLoading(true)
+    api.get(`/teams/students/${member.id}/profile`)
+      .then(res => {
+        if (res.data) {
+          setProfileData(res.data)
+        }
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false))
+  }, [member?.id])
+
+  // Live profile data from backend API with robust fallbacks
+  const name = profileData?.name || member?.name || 'Member'
+  const dept = profileData?.department || member?.department || 'Engineering'
   const deptCode = dept.toLowerCase().includes('chem') ? 'CH' : dept.toLowerCase().includes('mech') ? 'MTR' : 'CS'
-  const rollNo = member?.rollNumber || `21${deptCode}104`
-  const contact = member?.contactNumber || '+91 98765 43210'
-  const email = member?.name ? `${member.name.toLowerCase().replace(/\s+/g, '.')}@bit.edu.in` : 'student@bit.edu.in'
-  const bio = member?.bio || 'Passionate engineering student dedicated to innovation, technology, and collaborative team projects.'
-  const skills = (member?.skills && member.skills.length > 0)
-    ? member.skills
-    : ['C / C++', 'Python', 'ROS 2', 'Embedded Systems', 'Arduino', 'Problem Solving']
-  const github = member?.githubLink || `https://github.com/${member?.name?.toLowerCase().replace(/\s+/g, '') || 'student'}`
-  const linkedin = member?.linkedinLink || `https://linkedin.com/in/${member?.name?.toLowerCase().replace(/\s+/g, '') || 'student'}`
+  const rollNo = profileData?.rollNumber || member?.rollNumber || `21${deptCode}104`
+  const email = profileData?.email || (name ? `${name.toLowerCase().replace(/\s+/g, '.')}@bit.edu.in` : 'student@bit.edu.in')
+  const bio = profileData?.bio || member?.bio || 'Passionate engineering student dedicated to innovation, technology, and collaborative team projects.'
+  const skills = (profileData?.skills && profileData.skills.length > 0)
+    ? profileData.skills
+    : ((member?.skills && member.skills.length > 0) ? member.skills : ['C / C++', 'Python', 'Web Development'])
+  const github = profileData?.githubLink?.trim() || member?.githubLink?.trim()
+  const linkedin = profileData?.linkedinLink?.trim() || member?.linkedinLink?.trim()
 
   return (
     <Popup
@@ -218,98 +207,78 @@ function MemberProfilePopup({
         <div className="space-y-5 animate-fade-in">
           {/* ── Hero Profile Banner ── */}
           <div
-            className="relative overflow-hidden p-5 rounded-3xl border border-white/10 shadow-xl flex flex-col sm:flex-row items-center sm:items-start gap-5"
-            style={{
-              background: 'linear-gradient(135deg, rgba(124, 58, 237, 0.2) 0%, rgba(30, 27, 75, 0.6) 100%)',
-              borderColor: 'rgba(139, 92, 246, 0.3)'
-            }}
+            className="relative overflow-hidden p-5 rounded-3xl border border-indigo-100 shadow-sm flex flex-col sm:flex-row items-center sm:items-start gap-5 bg-gradient-to-br from-indigo-50/80 via-purple-50/40 to-slate-50"
           >
-            {/* Ambient background glow */}
-            <div className="absolute top-0 right-0 w-48 h-48 bg-violet-600/10 rounded-full blur-2xl pointer-events-none" />
-
             <div
-              className="w-20 h-20 rounded-full flex items-center justify-center text-3xl font-extrabold text-white shadow-xl flex-shrink-0 border-2 border-violet-400/30"
+              className="w-20 h-20 rounded-full flex items-center justify-center text-3xl font-extrabold text-white shadow-md flex-shrink-0 border-2 border-white"
               style={isLeader
-                ? { background: 'linear-gradient(135deg, #d97706, #f59e0b)', boxShadow: '0 0 25px rgba(245,158,11,0.4)' }
-                : { background: 'linear-gradient(135deg, #7c3aed, #4f46e5)', boxShadow: '0 0 25px rgba(124,58,237,0.4)' }
+                ? { background: 'linear-gradient(135deg, #d97706, #f59e0b)' }
+                : { background: 'linear-gradient(135deg, #1a5fb4, #6366f1)' }
               }
             >
-              {member.avatarInitial || member.name[0]?.toUpperCase()}
+              {member.avatarInitial || name[0]?.toUpperCase()}
             </div>
 
             <div className="flex-1 text-center sm:text-left min-w-0 space-y-1">
               <div className="flex flex-col sm:flex-row items-center sm:items-baseline gap-2">
-                <h3 className="text-xl font-extrabold text-white tracking-wide" style={{ fontFamily: 'Outfit, sans-serif' }}>
-                  {member.name}
+                <h3 className="text-xl font-extrabold text-slate-800 tracking-wide" style={{ fontFamily: 'Outfit, sans-serif' }}>
+                  {name}
                 </h3>
                 {isLeader ? (
-                  <span className="inline-flex items-center gap-1 px-3 py-0.5 rounded-full text-xs font-semibold bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                  <span className="inline-flex items-center gap-1 px-3 py-0.5 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200">
                     <Crown size={12} /> Team Leader
                   </span>
                 ) : (
-                  <span className="inline-flex items-center gap-1 px-3 py-0.5 rounded-full text-xs font-semibold bg-violet-500/20 text-violet-300 border border-violet-500/30">
+                  <span className="inline-flex items-center gap-1 px-3 py-0.5 rounded-full text-xs font-semibold bg-primary-50 text-primary-700 border border-primary-200">
                     <Users size={12} /> {member.techRole || 'Team Member'}
                   </span>
                 )}
               </div>
-              <p className="text-xs text-white/60">{dept}</p>
+              <p className="text-xs text-slate-500">{dept}</p>
               <div className="pt-1 flex items-center justify-center sm:justify-start gap-2">
-                <span className="px-2.5 py-0.5 rounded-md bg-white/5 border border-white/10 text-[11px] font-mono text-violet-300">
+                <span className="px-2.5 py-0.5 rounded-md bg-white border border-slate-200 text-[11px] font-mono text-primary-700 shadow-2xs">
                   {rollNo}
                 </span>
               </div>
             </div>
           </div>
 
-          {/* ── 2-Column Info Grid ── */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {/* ── Info Grid (Reg No, Department, Email) ── */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             {/* Reg No */}
-            <div className="flex items-center gap-3 p-3 rounded-2xl bg-white/[0.03] border border-white/8">
-              <div className="w-9 h-9 rounded-xl bg-violet-500/15 border border-violet-500/20 flex items-center justify-center text-violet-300 flex-shrink-0">
+            <div className="flex items-center gap-3 p-3 rounded-2xl bg-slate-50 border border-slate-200/80">
+              <div className="w-9 h-9 rounded-xl bg-primary-50 border border-primary-100 flex items-center justify-center text-primary-600 flex-shrink-0">
                 <Contact size={16} />
               </div>
               <div className="min-w-0">
-                <p className="text-[10px] font-medium text-white/40 uppercase tracking-wider">Reg. No.</p>
-                <p className="text-xs font-bold text-white truncate" style={{ fontFamily: 'Outfit, sans-serif' }}>
+                <p className="text-[10px] font-medium text-slate-400 uppercase tracking-wider">Reg. No.</p>
+                <p className="text-xs font-bold text-slate-800 truncate" style={{ fontFamily: 'Outfit, sans-serif' }}>
                   {rollNo}
                 </p>
               </div>
             </div>
 
             {/* Department */}
-            <div className="flex items-center gap-3 p-3 rounded-2xl bg-white/[0.03] border border-white/8">
-              <div className="w-9 h-9 rounded-xl bg-violet-500/15 border border-violet-500/20 flex items-center justify-center text-violet-300 flex-shrink-0">
+            <div className="flex items-center gap-3 p-3 rounded-2xl bg-slate-50 border border-slate-200/80">
+              <div className="w-9 h-9 rounded-xl bg-primary-50 border border-primary-100 flex items-center justify-center text-primary-600 flex-shrink-0">
                 <BookOpen size={16} />
               </div>
               <div className="min-w-0">
-                <p className="text-[10px] font-medium text-white/40 uppercase tracking-wider">Department</p>
-                <p className="text-xs font-bold text-white truncate" style={{ fontFamily: 'Outfit, sans-serif' }}>
+                <p className="text-[10px] font-medium text-slate-400 uppercase tracking-wider">Department</p>
+                <p className="text-xs font-bold text-slate-800 truncate" style={{ fontFamily: 'Outfit, sans-serif' }}>
                   {dept}
                 </p>
               </div>
             </div>
 
-            {/* Contact No */}
-            <div className="flex items-center gap-3 p-3 rounded-2xl bg-white/[0.03] border border-white/8">
-              <div className="w-9 h-9 rounded-xl bg-violet-500/15 border border-violet-500/20 flex items-center justify-center text-violet-300 flex-shrink-0">
-                <Phone size={16} />
-              </div>
-              <div className="min-w-0">
-                <p className="text-[10px] font-medium text-white/40 uppercase tracking-wider">Contact No.</p>
-                <p className="text-xs font-bold text-white truncate" style={{ fontFamily: 'Outfit, sans-serif' }}>
-                  {contact}
-                </p>
-              </div>
-            </div>
-
             {/* Email */}
-            <div className="flex items-center gap-3 p-3 rounded-2xl bg-white/[0.03] border border-white/8">
-              <div className="w-9 h-9 rounded-xl bg-violet-500/15 border border-violet-500/20 flex items-center justify-center text-violet-300 flex-shrink-0">
+            <div className="flex items-center gap-3 p-3 rounded-2xl bg-slate-50 border border-slate-200/80">
+              <div className="w-9 h-9 rounded-xl bg-primary-50 border border-primary-100 flex items-center justify-center text-primary-600 flex-shrink-0">
                 <Mail size={16} />
               </div>
               <div className="min-w-0">
-                <p className="text-[10px] font-medium text-white/40 uppercase tracking-wider">Email ID</p>
-                <p className="text-xs font-bold text-white truncate" style={{ fontFamily: 'Outfit, sans-serif' }}>
+                <p className="text-[10px] font-medium text-slate-400 uppercase tracking-wider">Email ID</p>
+                <p className="text-xs font-bold text-slate-800 truncate" style={{ fontFamily: 'Outfit, sans-serif' }}>
                   {email}
                 </p>
               </div>
@@ -317,29 +286,29 @@ function MemberProfilePopup({
           </div>
 
           {/* ── About Me ── */}
-          <div className="p-4 rounded-2xl border border-white/8 bg-white/[0.02] space-y-1">
-            <p className="text-[10px] font-semibold text-white/40 uppercase tracking-wider">About Me</p>
-            <p className="text-xs text-white/70 leading-relaxed">
+          <div className="p-4 rounded-2xl border border-slate-200 bg-slate-50 space-y-1">
+            <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">About Me</p>
+            <p className="text-xs text-slate-700 leading-relaxed">
               {bio}
             </p>
           </div>
 
           {/* ── Skills ── */}
-          <div className="p-4 rounded-2xl border border-white/8 bg-white/[0.02] space-y-2.5">
+          <div className="p-4 rounded-2xl border border-slate-200 bg-slate-50 space-y-2.5">
             <div className="flex items-center gap-2">
-              <div className="w-6 h-6 rounded-lg bg-violet-500/15 flex items-center justify-center text-violet-300">
+              <div className="w-6 h-6 rounded-lg bg-primary-50 flex items-center justify-center text-primary-600">
                 <Star size={13} />
               </div>
-              <p className="text-[10px] font-semibold text-white/40 uppercase tracking-wider">Technical Skills</p>
+              <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Technical Skills</p>
             </div>
             <div className="flex flex-wrap gap-2 pt-0.5">
               {skills.map((s, idx) => (
                 <span
                   key={idx}
-                  className="px-3 py-1.5 rounded-xl bg-violet-950/40 border border-violet-500/25 text-violet-200 text-xs font-semibold flex items-center gap-2"
+                  className="px-3 py-1.5 rounded-xl bg-primary-50 border border-primary-100 text-primary-800 text-xs font-semibold flex items-center gap-2"
                   style={{ fontFamily: 'Outfit, sans-serif' }}
                 >
-                  <span className="w-1.5 h-1.5 rounded-full bg-violet-400" />
+                  <span className="w-1.5 h-1.5 rounded-full bg-primary-500" />
                   {s}
                 </span>
               ))}
@@ -348,40 +317,56 @@ function MemberProfilePopup({
 
           {/* ── LinkedIn & GitHub Links ── */}
           <div className="flex flex-col sm:flex-row gap-3 pt-1">
-            <a
-              href={linkedin}
-              target="_blank"
-              rel="noreferrer"
-              className="flex-1 flex items-center justify-between px-4 py-2.5 rounded-xl bg-blue-600/15 border border-blue-500/30 text-blue-300 hover:bg-blue-600/25 transition-all text-xs font-semibold"
-            >
-              <span className="flex items-center gap-2">
-                <Linkedin size={15} className="text-blue-400" /> LinkedIn Profile
-              </span>
-              <ExternalLink size={13} />
-            </a>
+            {linkedin ? (
+              <a
+                href={linkedin.startsWith('http') ? linkedin : `https://${linkedin}`}
+                target="_blank"
+                rel="noreferrer"
+                className="flex-1 flex items-center justify-between px-4 py-2.5 rounded-xl bg-blue-50 border border-blue-200 text-blue-700 hover:bg-blue-100 transition-all text-xs font-semibold shadow-2xs"
+              >
+                <span className="flex items-center gap-2">
+                  <Linkedin size={15} className="text-blue-600" /> LinkedIn Profile
+                </span>
+                <ExternalLink size={13} />
+              </a>
+            ) : (
+              <div className="flex-1 flex items-center justify-between px-4 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-400 text-xs font-medium select-none">
+                <span className="flex items-center gap-2">
+                  <Linkedin size={15} className="text-slate-400" /> LinkedIn Not Added
+                </span>
+              </div>
+            )}
 
-            <a
-              href={github}
-              target="_blank"
-              rel="noreferrer"
-              className="flex-1 flex items-center justify-between px-4 py-2.5 rounded-xl bg-white/5 border border-white/15 text-white/80 hover:bg-white/10 transition-all text-xs font-semibold"
-            >
-              <span className="flex items-center gap-2">
-                <Github size={15} className="text-white" /> GitHub Profile
-              </span>
-              <ExternalLink size={13} />
-            </a>
+            {github ? (
+              <a
+                href={github.startsWith('http') ? github : `https://${github}`}
+                target="_blank"
+                rel="noreferrer"
+                className="flex-1 flex items-center justify-between px-4 py-2.5 rounded-xl bg-slate-100 border border-slate-300 text-slate-800 hover:bg-slate-200 transition-all text-xs font-semibold shadow-2xs"
+              >
+                <span className="flex items-center gap-2">
+                  <Github size={15} className="text-slate-900" /> GitHub Profile
+                </span>
+                <ExternalLink size={13} />
+              </a>
+            ) : (
+              <div className="flex-1 flex items-center justify-between px-4 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-400 text-xs font-medium select-none">
+                <span className="flex items-center gap-2">
+                  <Github size={15} className="text-slate-400" /> GitHub Not Added
+                </span>
+              </div>
+            )}
           </div>
 
           {/* ── Governance Actions (Remove) ── */}
           {currentUserIsLeader && !isLeader && onRemoveClick && (
-            <div className="pt-2 border-t border-white/10 flex justify-end">
+            <div className="pt-2 border-t border-slate-200 flex justify-end">
               <button
                 onClick={() => {
                   onClose()
                   onRemoveClick(member)
                 }}
-                className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold text-red-400 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 transition-all"
+                className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold text-red-600 bg-red-50 hover:bg-red-100 border border-red-200 transition-all"
               >
                 <XCircle size={14} /> Remove Member
               </button>
@@ -495,17 +480,17 @@ function MailboxPopup({
     >
       {!isLeader ? (
         <div className="flex flex-col items-center justify-center h-48 text-center">
-          <Shield size={36} className="text-white/20 mb-3" />
-          <p className="text-white/40 text-sm">Only the Team Leader can view join requests.</p>
+          <Shield size={36} className="text-slate-300 mb-3" />
+          <p className="text-slate-500 text-sm">Only the Team Leader can view join requests.</p>
         </div>
       ) : loading ? (
-        <div className="flex items-center justify-center h-48 text-white/40">
+        <div className="flex items-center justify-center h-48 text-slate-400">
           <RefreshCw size={24} className="animate-spin" />
         </div>
       ) : requests.length === 0 ? (
         <div className="flex flex-col items-center justify-center h-48 text-center">
-          <MailOpen size={36} className="text-white/20 mb-3" />
-          <p className="text-white/40 text-sm">No pending join requests.</p>
+          <MailOpen size={36} className="text-slate-300 mb-3" />
+          <p className="text-slate-500 text-sm">No pending join requests.</p>
         </div>
       ) : (
         <div className="space-y-4">
@@ -516,40 +501,39 @@ function MailboxPopup({
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="rounded-2xl border border-white/8 p-5"
-              style={{ background: 'rgba(255,255,255,0.03)' }}
+              className="rounded-2xl border border-slate-200 p-5 bg-slate-50 shadow-2xs"
             >
               <div className="flex items-start gap-4">
                 {/* Avatar */}
                 <div
-                  className="w-11 h-11 rounded-full flex items-center justify-center text-white font-bold flex-shrink-0"
-                  style={{ background: 'linear-gradient(135deg, #1a5fb4, #0ba5a5)' }}
+                  className="w-11 h-11 rounded-full flex items-center justify-center text-white font-bold flex-shrink-0 shadow-xs"
+                  style={{ background: 'linear-gradient(135deg, #1a5fb4, #0d9488)' }}
                 >
                   {req.name?.[0] || 'S'}
                 </div>
 
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap mb-1">
-                    <span className="font-semibold text-white text-sm">{req.name}</span>
+                    <span className="font-semibold text-slate-800 text-sm">{req.name}</span>
                     <span className="badge badge-primary text-xs">{req.requestedRole}</span>
                   </div>
-                  <div className="flex items-center gap-3 text-xs text-white/40 mb-2">
+                  <div className="flex items-center gap-3 text-xs text-slate-500 mb-2">
                     <span>{req.department}</span>
                     <span>·</span>
                     <span className="font-mono">{req.rollNumber}</span>
                   </div>
                   <div className="flex flex-wrap gap-1">
-                    {(req.skills || []).map(s => <span key={s} className="badge badge-accent text-xs">{s}</span>)}
+                    {(req.skills || []).map(s => <span key={s} className="badge badge-teal text-xs">{s}</span>)}
                   </div>
                 </div>
               </div>
 
               {/* Actions */}
-              <div className="flex gap-3 mt-4 pt-4 border-t border-white/6">
+              <div className="flex gap-3 mt-4 pt-4 border-t border-slate-200">
                 <button
                   disabled={processing === req.id}
                   onClick={() => handleReject(req)}
-                  className="flex-1 py-2 rounded-xl text-sm font-semibold flex items-center justify-center gap-2 border border-red-500/20 text-red-400 hover:bg-red-500/10 transition-all"
+                  className="flex-1 py-2 rounded-xl text-sm font-semibold flex items-center justify-center gap-2 border border-red-200 text-red-600 hover:bg-red-50 transition-all"
                 >
                   {processing === req.id ? <RefreshCw size={14} className="animate-spin" /> : <XCircle size={14} />}
                   Decline
@@ -557,7 +541,7 @@ function MailboxPopup({
                 <button
                   disabled={processing === req.id}
                   onClick={() => handleAccept(req)}
-                  className="flex-1 py-2 rounded-xl text-sm font-semibold flex items-center justify-center gap-2 border border-emerald-500/20 text-emerald-400 hover:bg-emerald-500/10 transition-all"
+                  className="flex-1 py-2 rounded-xl text-sm font-semibold flex items-center justify-center gap-2 border border-emerald-200 text-emerald-700 hover:bg-emerald-50 transition-all"
                 >
                   {processing === req.id ? <RefreshCw size={14} className="animate-spin" /> : <CheckCircle size={14} />}
                   Accept
@@ -591,141 +575,145 @@ function StudentProfileModal({
       .finally(() => setLoading(false))
   }, [studentId])
 
-  const domainGradient: Record<string, string> = {
-    'IoT': 'from-emerald-600 to-teal-600',
-    'ML/AI': 'from-violet-600 to-purple-600',
-    'Web': 'from-primary-600 to-blue-600',
-    'Embedded': 'from-amber-600 to-orange-600',
-    'Data Science': 'from-pink-600 to-rose-600',
-  }
-
   return (
     <Popup
       open={!!studentId}
       onClose={onClose}
+      zIndex={120}
       title={profile?.name ?? 'Student Profile'}
       subtitle={profile?.department}
       icon={<Users size={17} className="text-white" />}
     >
       {loading ? (
         <div className="flex items-center justify-center h-60">
-          <RefreshCw size={28} className="animate-spin text-white/40" />
+          <RefreshCw size={28} className="animate-spin text-slate-400" />
         </div>
       ) : !profile ? (
-        <div className="flex flex-col items-center justify-center h-60 text-white/30">
+        <div className="flex flex-col items-center justify-center h-60 text-slate-400">
           <Users size={36} className="mb-3" />
           <p>Failed to load profile.</p>
         </div>
       ) : (
         <div className="space-y-5">
           {/* ── Hero Profile Header ── */}
-          <div className="flex items-center gap-5 p-4 rounded-2xl border border-white/10" style={{ background: 'linear-gradient(135deg, rgba(26,95,180,0.15), rgba(124,58,237,0.1))' }}>
+          <div className="flex items-center gap-5 p-4 rounded-2xl border border-indigo-100 bg-gradient-to-r from-blue-50/80 to-indigo-50/60 shadow-2xs">
             <div
-              className="w-16 h-16 rounded-full flex items-center justify-center text-2xl font-bold text-white flex-shrink-0 shadow-lg border-2 border-violet-500/30"
-              style={{ background: 'linear-gradient(135deg, #7c3aed, #4f46e5)' }}
+              className="w-16 h-16 rounded-full flex items-center justify-center text-2xl font-bold text-white flex-shrink-0 shadow-md border-2 border-white"
+              style={{ background: 'linear-gradient(135deg, #1a5fb4, #6366f1)' }}
             >
-              {profile.avatarInitial || profile.name?.[0]?.toUpperCase()}
+              {profile.avatarInitial || profile.name?.[0]?.toUpperCase() || 'S'}
             </div>
             <div className="flex-1 min-w-0">
-              <h2 className="text-lg font-bold text-white leading-tight" style={{ fontFamily: 'Outfit, sans-serif' }}>{profile.name}</h2>
-              <p className="text-xs text-white/60 mt-0.5">{profile.department}</p>
+              <h2 className="text-lg font-bold text-slate-800 leading-tight" style={{ fontFamily: 'Outfit, sans-serif' }}>{profile.name}</h2>
+              <p className="text-xs text-slate-500 mt-0.5">{profile.department}</p>
               <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-                <span className="badge badge-primary text-[11px] font-mono">
-                  {profile.rollNumber || `21${profile.department?.substring(0, 2)?.toUpperCase() || 'CS'}104`}
-                </span>
-                <span className="badge badge-accent text-[11px]">
-                  {profile.yearOfStudy ? `Year ${profile.yearOfStudy}` : '3rd Year'}
-                </span>
+                {profile.rollNumber && (
+                  <span className="badge badge-primary text-[11px] font-mono">
+                    {profile.rollNumber}
+                  </span>
+                )}
+                {profile.yearOfStudy && (
+                  <span className="badge badge-teal text-[11px]">
+                    Year {profile.yearOfStudy}
+                  </span>
+                )}
               </div>
             </div>
           </div>
 
           {/* ── Details Grid ── */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div className="p-3 rounded-xl bg-white/[0.03] border border-white/5 flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg bg-violet-500/15 flex items-center justify-center text-violet-400 flex-shrink-0">
+            <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/80 flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-primary-50 flex items-center justify-center text-primary-600 flex-shrink-0">
                 <Contact size={16} />
               </div>
               <div className="min-w-0">
-                <p className="text-[10px] text-white/40 uppercase tracking-wider">Reg. No.</p>
-                <p className="text-xs font-semibold text-white truncate" style={{ fontFamily: 'Outfit, sans-serif' }}>
-                  {profile.rollNumber || `21${profile.department?.substring(0, 2)?.toUpperCase() || 'CS'}104`}
+                <p className="text-[10px] text-slate-400 uppercase tracking-wider">Reg. No.</p>
+                <p className="text-xs font-semibold text-slate-800 truncate" style={{ fontFamily: 'Outfit, sans-serif' }}>
+                  {profile.rollNumber || 'N/A'}
                 </p>
               </div>
             </div>
 
-            <div className="p-3 rounded-xl bg-white/[0.03] border border-white/5 flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg bg-violet-500/15 flex items-center justify-center text-violet-400 flex-shrink-0">
-                <Phone size={16} />
+            <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/80 flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-primary-50 flex items-center justify-center text-primary-600 flex-shrink-0">
+                <Mail size={16} />
               </div>
               <div className="min-w-0">
-                <p className="text-[10px] text-white/40 uppercase tracking-wider">Contact</p>
-                <p className="text-xs font-semibold text-white truncate" style={{ fontFamily: 'Outfit, sans-serif' }}>
-                  {profile.contactNo || profile.contactNumber || '+91 98765 43210'}
+                <p className="text-[10px] text-slate-400 uppercase tracking-wider">Email</p>
+                <p className="text-xs font-semibold text-slate-800 truncate" style={{ fontFamily: 'Outfit, sans-serif' }}>
+                  {profile.email || 'N/A'}
                 </p>
               </div>
             </div>
           </div>
 
           {/* ── Bio ── */}
-          <div className="rounded-xl p-3.5 border border-white/8 bg-white/[0.02]">
-            <p className="text-[10px] uppercase tracking-wider text-white/40 mb-1 font-semibold">About</p>
-            <p className="text-xs text-white/70 leading-relaxed">
-              {profile.bio || 'Passionate engineering student dedicated to innovation, robotics, and collaborative team projects.'}
-            </p>
-          </div>
+          {profile.bio && (
+            <div className="rounded-xl p-3.5 border border-slate-200 bg-slate-50">
+              <p className="text-[10px] uppercase tracking-wider text-slate-400 mb-1 font-semibold">About</p>
+              <p className="text-xs text-slate-700 leading-relaxed">
+                {profile.bio}
+              </p>
+            </div>
+          )}
 
           {/* ── Skills ── */}
-          <div>
-            <p className="text-[10px] uppercase tracking-wider text-white/40 mb-2 font-semibold flex items-center gap-1">
-              <Code2 size={12} /> Skills
-            </p>
-            <div className="flex flex-wrap gap-1.5">
-              {(profile.skills && profile.skills.length > 0
-                ? profile.skills
-                : ['C / C++', 'Python', 'ROS 2', 'Embedded Systems', 'Arduino']
-              ).map(sk => (
-                <span key={sk} className="px-2.5 py-1 rounded-lg bg-violet-950/40 border border-violet-500/25 text-violet-200 text-xs font-medium flex items-center gap-1.5">
-                  <span className="w-1.5 h-1.5 rounded-full bg-violet-400" />
-                  {sk}
-                </span>
-              ))}
+          {profile.skills && profile.skills.length > 0 && (
+            <div>
+              <p className="text-[10px] uppercase tracking-wider text-slate-400 mb-2 font-semibold flex items-center gap-1">
+                <Code2 size={12} /> Skills
+              </p>
+              <div className="flex flex-wrap gap-1.5">
+                {profile.skills.map(sk => (
+                  <span key={sk} className="px-2.5 py-1 rounded-lg bg-primary-50 border border-primary-100 text-primary-800 text-xs font-medium flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-primary-500" />
+                    {sk}
+                  </span>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
 
           {/* ── Links ── */}
-          <div className="flex gap-2 pt-1">
-            <a
-              href={profile.githubLink || 'https://github.com'}
-              target="_blank"
-              rel="noreferrer"
-              className="flex-1 flex items-center justify-between px-3 py-2 rounded-xl border border-white/10 text-white/70 hover:text-white hover:border-white/25 transition-all text-xs font-semibold bg-white/5"
-            >
-              <span className="flex items-center gap-1.5">
-                <Github size={14} className="text-white" /> GitHub
-              </span>
-              <ExternalLink size={13} />
-            </a>
-            <a
-              href={profile.linkedinLink || 'https://linkedin.com'}
-              target="_blank"
-              rel="noreferrer"
-              className="flex-1 flex items-center justify-between px-3 py-2 rounded-xl border border-blue-500/30 text-blue-300 hover:bg-blue-600/20 transition-all text-xs font-semibold bg-blue-600/10"
-            >
-              <span className="flex items-center gap-1.5">
-                <Linkedin size={14} className="text-blue-400" /> LinkedIn
-              </span>
-              <ExternalLink size={13} />
-            </a>
-          </div>
+          {(profile.githubLink || profile.linkedinLink) && (
+            <div className="flex gap-2 pt-1">
+              {profile.githubLink && (
+                <a
+                  href={profile.githubLink}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex-1 flex items-center justify-between px-3 py-2 rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-100 transition-all text-xs font-semibold bg-slate-50"
+                >
+                  <span className="flex items-center gap-1.5">
+                    <Github size={14} className="text-slate-800" /> GitHub
+                  </span>
+                  <ExternalLink size={13} />
+                </a>
+              )}
+              {profile.linkedinLink && (
+                <a
+                  href={profile.linkedinLink}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex-1 flex items-center justify-between px-3 py-2 rounded-xl border border-blue-200 text-blue-700 hover:bg-blue-100 transition-all text-xs font-semibold bg-blue-50"
+                >
+                  <span className="flex items-center gap-1.5">
+                    <Linkedin size={14} className="text-blue-600" /> LinkedIn
+                  </span>
+                  <ExternalLink size={13} />
+                </a>
+              )}
+            </div>
+          )}
 
           {/* ── Idea Repository ── */}
           <div>
-            <p className="text-[11px] uppercase tracking-wider text-white/30 mb-3 flex items-center gap-1.5">
+            <p className="text-[11px] uppercase tracking-wider text-slate-400 mb-3 flex items-center gap-1.5 font-semibold">
               <Star size={11} /> Idea Repository
             </p>
             {profile.ideas.length === 0 ? (
-              <div className="text-center py-6 rounded-2xl border border-dashed border-white/10 text-white/25 text-sm">
+              <div className="text-center py-6 rounded-2xl border border-dashed border-slate-200 text-slate-400 text-sm">
                 No ideas posted yet.
               </div>
             ) : (
@@ -733,18 +721,17 @@ function StudentProfileModal({
                 {profile.ideas.map(idea => (
                   <div
                     key={idea.id}
-                    className="p-4 rounded-2xl border border-white/8 hover:border-primary-500/30 transition-all"
-                    style={{ background: 'rgba(255,255,255,0.03)' }}
+                    className="p-4 rounded-2xl border border-slate-200 bg-white shadow-2xs hover:border-slate-300 transition-all"
                   >
                     <div className="flex items-start justify-between gap-2 mb-1.5">
-                      <h4 className="font-semibold text-white text-sm leading-snug">{idea.title}</h4>
+                      <h4 className="font-semibold text-slate-800 text-sm leading-snug">{idea.title}</h4>
                       <div className="flex gap-1.5 flex-shrink-0">
                         {idea.domain && (
                           <span className="badge badge-primary text-[10px]">{idea.domain}</span>
                         )}
                         <span className={`badge text-[10px] ${
                           idea.status === 'APPROVED'
-                            ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/25'
+                            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                             : idea.status === 'REJECTED'
                             ? 'badge-danger'
                             : 'badge-accent'
@@ -753,7 +740,7 @@ function StudentProfileModal({
                         </span>
                       </div>
                     </div>
-                    <p className="text-xs text-white/45 line-clamp-2 mb-2">{idea.description}</p>
+                    <p className="text-xs text-slate-600 line-clamp-2 mb-2">{idea.description}</p>
                     {idea.techStack && (
                       <div className="flex flex-wrap gap-1">
                         {idea.techStack.split(',').map((t, i) => (
@@ -761,7 +748,7 @@ function StudentProfileModal({
                         ))}
                       </div>
                     )}
-                    <div className="mt-2 flex items-center gap-1 text-xs text-white/30">
+                    <div className="mt-2 flex items-center gap-1 text-xs text-slate-400">
                       <Star size={10} /> {idea.upvoteCount ?? 0} upvotes
                     </div>
                   </div>
@@ -794,27 +781,18 @@ function AddMembersPopup({
   const [inviting, setInviting]   = useState<string | null>(null)
   const [viewProfileId, setViewProfileId] = useState<string | null>(null)
 
-  // ── Build trie whenever students list changes ──
-  const trie = useMemo(() => {
-    const t = new Trie()
-    students.forEach((s, i) => t.insert(s.name, i))
-    return t
-  }, [students])
-
-  // ── Trie-powered name search + fallback linear for roll/skill ──
+  // ── Standard JavaScript filtering for candidate name, roll, skills, department ──
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
     if (!q) return students
 
-    // Trie prefix search on names
-    const nameHits = trie.search(q)
-
-    return students.filter((s, i) =>
-      nameHits.has(i) ||
+    return students.filter(s =>
+      s.name?.toLowerCase().includes(q) ||
       s.rollNumber?.toLowerCase().includes(q) ||
+      s.department?.toLowerCase().includes(q) ||
       (s.skills && s.skills.some(sk => sk.toLowerCase().includes(q)))
     )
-  }, [query, students, trie])
+  }, [query, students])
 
   useEffect(() => {
     if (!open || !isLeader) return
@@ -858,14 +836,14 @@ function AddMembersPopup({
       >
         {!isLeader ? (
           <div className="flex flex-col items-center justify-center h-48 text-center">
-            <Shield size={36} className="text-white/20 mb-3" />
-            <p className="text-white/40 text-sm">Only the Team Leader can invite members.</p>
+            <Shield size={36} className="text-slate-300 mb-3" />
+            <p className="text-slate-500 text-sm">Only the Team Leader can invite members.</p>
           </div>
         ) : (
           <div className="space-y-5">
             {/* Search bar */}
             <div className="relative">
-              <Search size={15} className="absolute left-4 top-1/2 -translate-y-1/2 text-white/30" />
+              <Search size={15} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
               <input
                 type="text"
                 value={query}
@@ -877,7 +855,7 @@ function AddMembersPopup({
               {query && (
                 <button
                   onClick={() => setQuery('')}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/60 transition-colors"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
                 >
                   <X size={14} />
                 </button>
@@ -886,23 +864,23 @@ function AddMembersPopup({
 
             {/* Result count */}
             {query && !loading && (
-              <p className="text-xs text-white/30">
-                {filtered.length} result{filtered.length !== 1 ? 's' : ''} for <span className="text-primary-400">"{query}"</span>
+              <p className="text-xs text-slate-500">
+                {filtered.length} result{filtered.length !== 1 ? 's' : ''} for <span className="text-primary-600 font-semibold">"{query}"</span>
               </p>
             )}
 
             {/* Results */}
             <div className="space-y-3">
               {loading ? (
-                <div className="flex items-center justify-center py-10 text-white/40">
+                <div className="flex items-center justify-center py-10 text-slate-400">
                   <RefreshCw size={24} className="animate-spin" />
                 </div>
               ) : filtered.length === 0 ? (
-                <div className="flex flex-col items-center gap-2 py-10 text-white/30 text-sm">
-                  <Users size={32} className="text-white/15" />
+                <div className="flex flex-col items-center gap-2 py-10 text-slate-400 text-sm">
+                  <Users size={32} className="text-slate-300" />
                   {query ? 'No students found matching your search.' : 'No students without a team found.'}
                 </div>
-              ) : filtered.map(s => {
+              ) : filtered.map((s: StudentSearchResult) => {
                 const isInvited = invited.has(s.id)
                 return (
                   <motion.div
@@ -910,13 +888,12 @@ function AddMembersPopup({
                     layout
                     initial={{ opacity: 0, y: 8 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="flex items-center gap-4 p-4 rounded-2xl border border-white/8 hover:border-primary-500/20 transition-all"
-                    style={{ background: 'rgba(255,255,255,0.03)' }}
+                    className="flex items-center gap-4 p-4 rounded-2xl border border-slate-200 bg-slate-50 hover:border-slate-300 transition-all shadow-2xs"
                   >
                     {/* Avatar */}
                     <div
-                      className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm flex-shrink-0 shadow-sm"
-                      style={{ background: 'linear-gradient(135deg, #1a5fb4, #0ba5a5)' }}
+                      className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm flex-shrink-0 shadow-xs"
+                      style={{ background: 'linear-gradient(135deg, #1a5fb4, #0d9488)' }}
                     >
                       {s.avatarInitial || 'S'}
                     </div>
@@ -924,14 +901,14 @@ function AddMembersPopup({
                     {/* Info */}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-semibold text-white text-sm">{s.name}</span>
-                        <span className="text-xs text-white/35 font-mono">{s.rollNumber}</span>
+                        <span className="font-semibold text-slate-800 text-sm">{s.name}</span>
+                        <span className="text-xs text-slate-500 font-mono">{s.rollNumber}</span>
                       </div>
-                      <p className="text-xs text-white/40 mb-1.5">{s.department}</p>
+                      <p className="text-xs text-slate-500 mb-1.5">{s.department}</p>
                       <div className="flex flex-wrap gap-1">
-                        {(s.skills || []).slice(0, 4).map(sk => <span key={sk} className="badge badge-accent text-[10px]">{sk}</span>)}
+                        {(s.skills || []).slice(0, 4).map((sk: string) => <span key={sk} className="badge badge-teal text-[10px]">{sk}</span>)}
                         {(s.skills?.length ?? 0) > 4 && (
-                          <span className="text-[10px] text-white/25">+{(s.skills?.length ?? 0) - 4} more</span>
+                          <span className="text-[10px] text-slate-400">+{(s.skills?.length ?? 0) - 4} more</span>
                         )}
                       </div>
                     </div>
@@ -941,7 +918,7 @@ function AddMembersPopup({
                       {/* View Profile */}
                       <button
                         onClick={() => setViewProfileId(s.id)}
-                        className="px-3 py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5 border border-white/15 text-white/60 hover:text-white hover:border-white/30 hover:bg-white/5 transition-all"
+                        className="px-3 py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5 border border-slate-200 text-slate-700 hover:bg-slate-100 transition-all bg-white"
                         title="View student profile and ideas"
                       >
                         <ChevronRight size={13} /> View
@@ -953,7 +930,7 @@ function AddMembersPopup({
                         onClick={() => handleInvite(s)}
                         className={`px-3 py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all ${
                           isInvited
-                            ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 cursor-default'
+                            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 cursor-default'
                             : 'btn-primary'
                         }`}
                       >
@@ -989,46 +966,33 @@ function LeaderCard({ member, onClick }: { member: TeamMember; onClick: () => vo
       whileHover={{ y: -4, scale: 1.01 }}
       whileTap={{ scale: 0.98 }}
       onClick={onClick}
-      className="relative cursor-pointer rounded-3xl p-6 overflow-hidden col-span-1"
-      style={{
-        background: 'linear-gradient(145deg, rgba(217,119,6,0.15), rgba(245,158,11,0.08))',
-        border: '2px solid rgba(245,158,11,0.45)',
-        boxShadow: '0 8px 32px rgba(245,158,11,0.12)',
-      }}
+      className="relative cursor-pointer rounded-3xl p-6 overflow-hidden col-span-1 bg-gradient-to-br from-amber-50/90 via-amber-50/40 to-white border-2 border-amber-300 shadow-sm"
     >
-      {/* Crown glow */}
-      <div
-        className="absolute -top-6 -right-6 w-32 h-32 rounded-full opacity-20 pointer-events-none"
-        style={{ background: 'radial-gradient(circle, #f59e0b, transparent 70%)' }}
-      />
-
       {/* Crown icon */}
       <div className="relative z-10 flex items-start justify-between mb-4">
         <div
-          className="w-14 h-14 rounded-2xl flex items-center justify-center text-2xl font-bold text-white shadow-lg"
+          className="w-14 h-14 rounded-2xl flex items-center justify-center text-2xl font-bold text-white shadow-md"
           style={{
             background: 'linear-gradient(135deg, #d97706, #f59e0b)',
-            boxShadow: '0 4px 16px rgba(245,158,11,0.35)',
           }}
         >
           {member.avatarInitial || member.name[0]?.toUpperCase()}
         </div>
-        <Crown size={22} className="text-amber-400 mt-1" />
+        <Crown size={22} className="text-amber-500 mt-1" />
       </div>
 
       <div className="relative z-10">
-        <p className="font-bold text-white text-base mb-0.5" style={{ fontFamily: 'Outfit, sans-serif' }}>
+        <p className="font-bold text-slate-900 text-base mb-0.5" style={{ fontFamily: 'Outfit, sans-serif' }}>
           {member.name}
         </p>
-        <p className="text-xs text-white/50 mb-3">{member.department}</p>
+        <p className="text-xs text-slate-500 mb-3">{member.department}</p>
         <div className="flex flex-wrap gap-1.5 mb-4">
           <span
-            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold border"
-            style={{ background: 'rgba(245,158,11,0.15)', color: '#f59e0b', borderColor: 'rgba(245,158,11,0.3)' }}
+            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-800 border border-amber-200"
           >
             <Crown size={11} /> Team Leader
           </span>
-          {member.techRole && member.techRole !== 'Team Leader' && (
+          {member.techRole && !['Team Leader', 'Team Lead', 'LEADER', 'Leader'].includes(member.techRole) && (
             <span className="badge badge-accent text-xs">{member.techRole}</span>
           )}
         </div>
@@ -1036,13 +1000,13 @@ function LeaderCard({ member, onClick }: { member: TeamMember; onClick: () => vo
         {/* Skills */}
         <div className="flex flex-wrap gap-1">
           {(member.skills ?? []).slice(0, 3).map(s => (
-            <span key={s} className="text-[10px] px-2 py-0.5 rounded-full text-white/50 border border-white/10">
+            <span key={s} className="text-[10px] px-2 py-0.5 rounded-full text-slate-600 border border-slate-200 bg-white shadow-2xs">
               {s}
             </span>
           ))}
         </div>
 
-        <div className="mt-4 flex items-center gap-1.5 text-xs text-amber-400/60 group-hover:text-amber-400 transition-colors">
+        <div className="mt-4 flex items-center gap-1.5 text-xs text-amber-700 font-semibold group-hover:text-amber-800 transition-colors">
           <span>View Profile</span>
           <ChevronRight size={12} />
         </div>
@@ -1058,21 +1022,20 @@ function MemberCard({ member, onClick }: { member: TeamMember; onClick: () => vo
       whileHover={{ y: -3, scale: 1.01 }}
       whileTap={{ scale: 0.98 }}
       onClick={onClick}
-      className="cursor-pointer rounded-2xl p-5 border border-white/8 hover:border-primary-500/30 transition-all duration-200"
-      style={{ background: 'rgba(7,25,45,0.8)' }}
+      className="cursor-pointer rounded-2xl p-5 border border-slate-200 bg-white shadow-xs hover:border-primary-300 hover:shadow-sm transition-all duration-200"
     >
       {/* Avatar */}
       <div
-        className="w-12 h-12 rounded-full flex items-center justify-center text-white font-bold text-base mb-3 shadow-sm"
-        style={{ background: 'linear-gradient(135deg, #1a5fb4, #0ba5a5)' }}
+        className="w-12 h-12 rounded-full flex items-center justify-center text-white font-bold text-base mb-3 shadow-xs"
+        style={{ background: 'linear-gradient(135deg, #1a5fb4, #0d9488)' }}
       >
         {member.avatarInitial || member.name[0]?.toUpperCase()}
       </div>
 
-      <p className="font-bold text-white text-sm mb-0.5" style={{ fontFamily: 'Outfit, sans-serif' }}>
+      <p className="font-bold text-slate-800 text-sm mb-0.5" style={{ fontFamily: 'Outfit, sans-serif' }}>
         {member.name}
       </p>
-      <p className="text-xs text-white/45 mb-3">{member.department}</p>
+      <p className="text-xs text-slate-500 mb-3">{member.department}</p>
 
       {/* Role badge */}
       {member.techRole && (
@@ -1082,18 +1045,18 @@ function MemberCard({ member, onClick }: { member: TeamMember; onClick: () => vo
       {/* Skills */}
       <div className="flex flex-wrap gap-1">
         {(member.skills ?? []).slice(0, 2).map(s => (
-          <span key={s} className="text-[10px] px-2 py-0.5 rounded-full text-white/40 border border-white/8">
+          <span key={s} className="text-[10px] px-2 py-0.5 rounded-full text-slate-600 border border-slate-200 bg-slate-50">
             {s}
           </span>
         ))}
         {(member.skills?.length ?? 0) > 2 && (
-          <span className="text-[10px] px-2 py-0.5 rounded-full text-white/30 border border-white/8">
+          <span className="text-[10px] px-2 py-0.5 rounded-full text-slate-400 border border-slate-200 bg-slate-50">
             +{(member.skills?.length ?? 0) - 2}
           </span>
         )}
       </div>
 
-      <div className="mt-3 flex items-center gap-1 text-xs text-white/25 hover:text-primary-400 transition-colors">
+      <div className="mt-3 flex items-center gap-1 text-xs text-primary-600 font-medium hover:text-primary-700 transition-colors">
         <span>View Profile</span>
         <ChevronRight size={11} />
       </div>
@@ -1133,7 +1096,7 @@ function DismantleTeamPopup({
   return (
     <Popup open={open} onClose={onClose} title={hasMentor ? "Request Team Dismantle" : "Dismantle Team"} icon={<AlertTriangle size={17} className="text-white" />}>
       <div className="space-y-4">
-        <p className="text-sm text-white/60">
+        <p className="text-sm text-slate-600">
           {hasMentor
             ? "Since your team has an assigned mentor, dismantling requires mentor approval. Please provide a detailed reason."
             : "This action cannot be undone. All members will be removed and the team will be permanently dissolved."}
@@ -1188,7 +1151,7 @@ function RemoveMemberPopup({
   return (
     <Popup open={open} onClose={onClose} title={hasMentor ? "Request Member Removal" : "Remove Member"} icon={<XCircle size={17} className="text-white" />}>
       <div className="space-y-4">
-        <p className="text-sm text-white/60">
+        <p className="text-sm text-slate-600">
           {hasMentor
             ? `Request removal of ${member?.name}. This requires mentor approval.`
             : `Remove ${member?.name} from the team. This action is immediate.`}
@@ -1223,7 +1186,7 @@ export default function TeamPortal() {
   const [dismantleTeamOpen, setDismantleTeamOpen] = useState(false)
   const [removeMemberTarget, setRemoveMemberTarget] = useState<TeamMember | null>(null)
   // ── Helper: fetch latest team state from backend and sync to Redux ──
-  const refreshTeam = useMemo(() => async () => {
+  const refreshTeam = useCallback(async () => {
     if (!team.teamId) return
     try {
       const res = await api.get('/teams/my')
@@ -1238,27 +1201,44 @@ export default function TeamPortal() {
             department: m.user?.department || 'Engineering',
             rollNumber: m.user?.studentProfile?.rollNumber || '',
             techRole: m.roleInTeam || 'Developer',
+            bio: m.user?.studentProfile?.bio || '',
+            githubLink: m.user?.studentProfile?.githubLink || '',
+            linkedinLink: m.user?.studentProfile?.linkedinLink || '',
             skills: m.user?.userSkills?.map((s: any) => s.skill?.skillName).filter(Boolean) || [],
             avatarInitial: (m.user?.name?.[0] || 'U').toUpperCase()
           }))
+
+        const hasLeader = mappedMembers.some(m => m.role === 'LEADER')
+        if (myTeam.status === 'DISSOLVED' || !hasLeader) {
+          dispatch(clearTeam())
+          navigate('/student/team', { replace: true })
+          return
+        }
+
         dispatch(setTeam({ members: mappedMembers, currentMemberCount: mappedMembers.length }))
+      } else {
+        dispatch(clearTeam())
+        navigate('/student/team', { replace: true })
       }
-    } catch { /* silent */ }
-  }, [team.teamId, dispatch])
+    } catch (err: any) {
+      if (err.response?.status === 404 || err.response?.status === 400) {
+        dispatch(clearTeam())
+        navigate('/student/team', { replace: true })
+      }
+    }
+  }, [team.teamId, dispatch, navigate])
 
   // ── Real-time polling: refresh team + pending count every 5 seconds ──
   useEffect(() => {
     if (!team.teamId) return
     refreshTeam()
 
-    const interval = setInterval(async () => {
+    const interval = setInterval(() => {
       refreshTeam()
-      // Also refresh pending join-request count for the leader
       if (team.isLeader) {
-        try {
-          const r = await api.get(`/teams/${team.teamId}/join-requests`)
-          if (Array.isArray(r.data)) setPendingCount(r.data.length)
-        } catch { /* silent */ }
+        api.get(`/teams/${team.teamId}/join-requests`)
+          .then(r => { if (Array.isArray(r.data)) setPendingCount(r.data.length) })
+          .catch(() => {})
       }
     }, 5000)
 
@@ -1267,13 +1247,16 @@ export default function TeamPortal() {
 
   // Redirect non-members
   useEffect(() => {
-    if (!team.teamId) navigate('/student/team', { replace: true })
+    if (!team.teamId) {
+      navigate('/student/team', { replace: true })
+    }
   }, [team.teamId, navigate])
-
-  if (!team.teamId) return null
 
   const leader  = team.members.find(m => m.role === 'LEADER')
   const members = team.members.filter(m => m.role !== 'LEADER')
+
+  if (!team.teamId || !leader) return null
+
   const spotsLeft = team.memberLimit - team.currentMemberCount
 
   return (
@@ -1281,15 +1264,8 @@ export default function TeamPortal() {
 
       {/* ── Portal Header ──────────────────────────────────────────────── */}
       <div
-        className="relative rounded-3xl overflow-hidden border border-white/8"
-        style={{ background: 'linear-gradient(145deg, rgba(26,95,180,0.12), rgba(11,165,165,0.08))' }}
+        className="relative rounded-3xl overflow-hidden border border-blue-100 bg-gradient-to-br from-blue-50/80 via-indigo-50/40 to-slate-50 shadow-xs"
       >
-        {/* Background glow */}
-        <div
-          className="absolute top-0 right-0 w-80 h-80 rounded-full opacity-10 pointer-events-none"
-          style={{ background: 'radial-gradient(circle, #1a5fb4, transparent 70%)' }}
-        />
-
         <div className="relative z-10 p-7 sm:p-9">
           <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-6">
             {/* Left: team info */}
@@ -1297,19 +1273,19 @@ export default function TeamPortal() {
               {/* Team badge */}
               <div className="flex items-center gap-2 mb-3">
                 <div
-                  className="w-10 h-10 rounded-xl flex items-center justify-center text-white font-bold text-base shadow-glow"
-                  style={{ background: 'linear-gradient(135deg, #1a5fb4, #0ba5a5)' }}
+                  className="w-10 h-10 rounded-xl flex items-center justify-center text-white font-bold text-base shadow-xs"
+                  style={{ background: 'linear-gradient(135deg, #1a5fb4, #0d9488)' }}
                 >
                   {team.teamName?.[0]}
                 </div>
-                <span className="text-xs font-semibold uppercase tracking-widest text-primary-300 opacity-75">
+                <span className="text-xs font-semibold uppercase tracking-widest text-primary-700">
                   Team Portal
                 </span>
               </div>
 
               {/* Team name */}
               <h1
-                className="text-3xl sm:text-4xl font-bold text-white mb-3 leading-tight"
+                className="text-3xl sm:text-4xl font-bold text-slate-800 mb-3 leading-tight"
                 style={{ fontFamily: 'Outfit, sans-serif' }}
               >
                 {team.teamName}
@@ -1317,7 +1293,7 @@ export default function TeamPortal() {
 
               {/* Project focus */}
               {team.projectFocus && (
-                <p className="text-white/60 text-sm leading-relaxed max-w-xl mb-5">
+                <p className="text-slate-600 text-sm leading-relaxed max-w-xl mb-5">
                   {team.projectFocus}
                 </p>
               )}
@@ -1333,7 +1309,7 @@ export default function TeamPortal() {
                 {team.status && (
                   <span className={`badge ${
                     team.currentMemberCount >= team.memberLimit || team.status === 'FULL' || team.status === 'LOCKED'
-                      ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-bold'
+                      ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 font-bold'
                       : 'badge-accent'
                   }`}>
                     {team.currentMemberCount >= team.memberLimit || team.status === 'FULL' ? 'FULL' : team.status}
@@ -1349,8 +1325,7 @@ export default function TeamPortal() {
                 <button
                   id="team-mailbox-btn"
                   onClick={() => setMailboxOpen(true)}
-                  className="w-11 h-11 rounded-2xl flex items-center justify-center border border-white/10 text-white/60 hover:text-white hover:border-primary-500/50 hover:bg-primary-500/10 transition-all"
-                  style={{ background: 'rgba(255,255,255,0.04)' }}
+                  className="w-11 h-11 rounded-2xl flex items-center justify-center border border-slate-200 text-slate-600 hover:text-slate-900 hover:border-primary-500/50 hover:bg-slate-50 bg-white shadow-2xs transition-all"
                 >
                   <MailOpen size={20} />
                 </button>
@@ -1360,7 +1335,7 @@ export default function TeamPortal() {
                     {pendingCount}
                   </span>
                 )}
-                <div className="absolute right-0 top-full mt-2 px-2.5 py-1 bg-surface-100 text-white text-xs rounded-lg shadow-card whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-10 border border-white/10">
+                <div className="absolute right-0 top-full mt-2 px-2.5 py-1 bg-slate-800 text-white text-xs rounded-lg shadow-md whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-10">
                   Mailbox
                 </div>
               </div>
@@ -1370,12 +1345,11 @@ export default function TeamPortal() {
                 <button
                   id="team-add-members-btn"
                   onClick={() => setAddMembersOpen(true)}
-                  className="w-11 h-11 rounded-2xl flex items-center justify-center border border-white/10 text-white/60 hover:text-white hover:border-teal/50 hover:bg-teal/10 transition-all"
-                  style={{ background: 'rgba(255,255,255,0.04)' }}
+                  className="w-11 h-11 rounded-2xl flex items-center justify-center border border-slate-200 text-slate-600 hover:text-slate-900 hover:border-teal/50 hover:bg-slate-50 bg-white shadow-2xs transition-all"
                 >
                   <UserPlus size={20} />
                 </button>
-                <div className="absolute right-0 top-full mt-2 px-2.5 py-1 bg-surface-100 text-white text-xs rounded-lg shadow-card whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-10 border border-white/10">
+                <div className="absolute right-0 top-full mt-2 px-2.5 py-1 bg-slate-800 text-white text-xs rounded-lg shadow-md whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-10">
                   Add Members
                 </div>
               </div>
@@ -1385,12 +1359,11 @@ export default function TeamPortal() {
                 <div className="relative group">
                   <button
                     onClick={() => setDismantleTeamOpen(true)}
-                    className="w-11 h-11 rounded-2xl flex items-center justify-center border border-red-500/20 text-red-400 hover:text-red-300 hover:border-red-500/50 hover:bg-red-500/10 transition-all ml-1"
-                    style={{ background: 'rgba(239,68,68,0.05)' }}
+                    className="w-11 h-11 rounded-2xl flex items-center justify-center border border-red-200 text-red-600 hover:text-red-700 hover:border-red-300 hover:bg-red-50 bg-white shadow-2xs transition-all ml-1"
                   >
                     <AlertTriangle size={20} />
                   </button>
-                  <div className="absolute right-0 top-full mt-2 px-2.5 py-1 bg-surface-100 text-white text-xs rounded-lg shadow-card whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-10 border border-white/10">
+                  <div className="absolute right-0 top-full mt-2 px-2.5 py-1 bg-slate-800 text-white text-xs rounded-lg shadow-md whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-10">
                     Dismantle Team
                   </div>
                 </div>
@@ -1403,10 +1376,10 @@ export default function TeamPortal() {
       {/* ── Members Section ───────────────────────────────────────────── */}
       <div>
         <div className="flex items-center justify-between mb-5">
-          <h2 className="text-lg font-bold text-white" style={{ fontFamily: 'Outfit, sans-serif' }}>
+          <h2 className="text-lg font-bold text-slate-800" style={{ fontFamily: 'Outfit, sans-serif' }}>
             Team Members
           </h2>
-          <span className="text-xs text-white/40">
+          <span className="text-xs text-slate-500">
             {team.currentMemberCount} member{team.currentMemberCount !== 1 ? 's' : ''}
             {spotsLeft > 0 && ` · ${spotsLeft} spot${spotsLeft !== 1 ? 's' : ''} open`}
           </span>
@@ -1438,12 +1411,12 @@ export default function TeamPortal() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: (members.length + i) * 0.05 }}
               onClick={() => team.isLeader && setAddMembersOpen(true)}
-              className={`rounded-2xl p-5 border-2 border-dashed border-white/10 flex flex-col items-center justify-center gap-2 min-h-[140px] ${
-                team.isLeader ? 'cursor-pointer hover:border-primary-500/40 hover:bg-primary-500/5 transition-all' : ''
+              className={`rounded-2xl p-5 border-2 border-dashed border-slate-300 flex flex-col items-center justify-center gap-2 min-h-[140px] bg-slate-50/50 ${
+                team.isLeader ? 'cursor-pointer hover:border-primary-400 hover:bg-primary-50/30 transition-all' : ''
               }`}
             >
-              <UserPlus size={20} className="text-white/20" />
-              <span className="text-xs text-white/25 text-center">
+              <UserPlus size={20} className="text-slate-400" />
+              <span className="text-xs text-slate-500 text-center font-medium">
                 {team.isLeader ? 'Invite a member' : 'Open slot'}
               </span>
             </motion.div>
@@ -1454,11 +1427,10 @@ export default function TeamPortal() {
       {/* ── Required Skills ───────────────────────────────────────────── */}
       {team.requiredSkills.length > 0 && (
         <div
-          className="rounded-3xl p-6 border border-white/8"
-          style={{ background: 'rgba(7,25,45,0.7)' }}
+          className="rounded-3xl p-6 border border-slate-200 bg-white shadow-xs"
         >
-          <h3 className="font-semibold text-white text-sm mb-4 flex items-center gap-2" style={{ fontFamily: 'Outfit, sans-serif' }}>
-            <Star size={16} className="text-primary-400" />
+          <h3 className="font-semibold text-slate-800 text-sm mb-4 flex items-center gap-2" style={{ fontFamily: 'Outfit, sans-serif' }}>
+            <Star size={16} className="text-primary-600" />
             Team Required Skills
           </h3>
           <div className="flex flex-wrap gap-2">

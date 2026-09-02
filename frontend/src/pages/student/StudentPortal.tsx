@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { useSelector, useDispatch } from 'react-redux'
 import {
@@ -28,6 +28,8 @@ export default function StudentPortal() {
   const team = useSelector((s: RootState) => s.team)
   const { user } = useSelector((s: RootState) => s.auth)
 
+  const [isProjectCompleted, setIsProjectCompleted] = useState(false)
+
   // Verify and sync team membership directly from backend database
   useEffect(() => {
     if (user?.userId) {
@@ -38,6 +40,19 @@ export default function StudentPortal() {
             const isLead = myTeam.members?.some(
               (m: any) => m.user?.id === user.userId && (m.roleInTeam === 'Team Lead' || m.roleInTeam === 'LEADER')
             ) || (myTeam.project?.postedBy?.id === user.userId)
+
+            // Check if certificate is issued or project is completed
+            if (myTeam.status === 'COMPLETED') {
+              setIsProjectCompleted(true)
+            } else {
+              api.get(`/certificates/team/${myTeam.id}`)
+                .then(cRes => {
+                  if (cRes.data && cRes.data.certificateNumber) {
+                    setIsProjectCompleted(true)
+                  }
+                })
+                .catch(() => {})
+            }
 
             let domainList: string[] = []
             if (myTeam.project?.domain) {
@@ -61,6 +76,7 @@ export default function StudentPortal() {
               }
             }
 
+            // Map server team members
             const mappedMembers: TeamMember[] = (myTeam.members || [])
               .filter((m: any) => m.inviteStatus === 'ACCEPTED' || !m.inviteStatus)
               .map((m: any) => ({
@@ -74,46 +90,81 @@ export default function StudentPortal() {
                 avatarInitial: (m.user?.name?.[0] || 'U').toUpperCase()
               }))
 
-            dispatch(setTeam({
-              teamId: myTeam.id.toString(),
-              teamName: myTeam.teamName,
-              projectDomain: domainList,
-              projectFocus: myTeam.project?.description || '',
-              isLeader: !!isLead,
-              leaderId: myTeam.project?.postedBy?.id?.toString() || null,
-              members: mappedMembers,
-              memberLimit: myTeam.project?.maxTeamSize || 4,
-              currentMemberCount: mappedMembers.length,
-              status: myTeam.status || 'RECRUITING',
-              requiredSkills: skillList
-            }))
+            const hasLeader = mappedMembers.some(m => m.role === 'LEADER')
+            if (myTeam.status === 'DISSOLVED' || !hasLeader) {
+              // Team leader went off or team dissolved -> remove team from state
+              if (team.teamId) dispatch(clearTeam())
+            } else {
+              dispatch(setTeam({
+                teamId: myTeam.id.toString(),
+                teamName: myTeam.teamName,
+                projectDomain: domainList,
+                projectFocus: myTeam.project?.description || '',
+                isLeader: !!isLead,
+                leaderId: myTeam.project?.postedBy?.id?.toString() || null,
+                members: mappedMembers,
+                memberLimit: myTeam.project?.maxTeamSize || 4,
+                currentMemberCount: mappedMembers.length,
+                status: myTeam.status || 'RECRUITING',
+                requiredSkills: skillList
+              }))
+            }
           } else {
             // User does not belong to any team
+            if (team.teamId) dispatch(clearTeam())
+          }
+        })
+        .catch(err => {
+          if ((err.response?.status === 404 || err.response?.status === 400) && team.teamId) {
             dispatch(clearTeam())
           }
         })
-        .catch(() => {
-          // If error occurs, keep local state
-        })
     }
-  }, [user?.userId, dispatch])
+  }, [user?.userId, team.teamId, dispatch])
 
-  // Build nav items dynamically based on team membership
+  // Build phase-grouped navigation matching concern-based architecture
   const NAV_ITEMS = [
+    // ── Overview / Main ──
     { label: 'Dashboard',       href: '/student/dashboard',   icon: <LayoutDashboard size={18} /> },
-    { label: 'My Profile',      href: '/student/profile',     icon: <User size={18} /> },
     { label: 'Idea Repository', href: '/student/ideas',       icon: <Lightbulb size={18} /> },
 
-    // ← Dynamic: Team Formation ↔ Team Name
-    team.teamId
-      ? { label: team.teamName ?? 'My Team', href: '/student/team-portal', icon: <Shield size={18} /> }
-      : { label: 'Team Formation',           href: '/student/team',        icon: <Users size={18} /> },
+    // ── Phase 1: SETUP ──
+    {
+      section: 'SETUP',
+      label: team.teamId ? (team.teamName ?? 'My Team') : 'Team Formation',
+      href: team.teamId ? '/student/team-portal' : '/student/team',
+      icon: team.teamId ? <Shield size={18} /> : <Users size={18} />
+    },
+    {
+      label: 'Mentor Matching',
+      href: '/student/mentors',
+      icon: <UserCheck size={18} />
+    },
 
-    { label: 'Mentor Matching', href: '/student/mentors',    icon: <UserCheck size={18} /> },
-    { label: 'Workspace',       href: '/student/workspace',  icon: <FolderKanban size={18} /> },
-    { label: 'Team Chat',       href: '/student/chat',       icon: <MessageSquare size={18} /> },
-    { label: 'Progress Portal', href: '/student/progress',   icon: <TrendingUp size={18} /> },
-    { label: 'Certificate',     href: '/student/certificate',icon: <Award size={18} /> },
+    // ── Phase 2: ACTIVE PROJECT ──
+    {
+      section: 'ACTIVE PROJECT',
+      label: 'Workspace',
+      href: '/student/workspace',
+      icon: <FolderKanban size={18} />,
+      badge: 'chat inside'
+    },
+    {
+      label: 'Progress',
+      href: '/student/progress',
+      icon: <TrendingUp size={18} />
+    },
+
+    // ── Phase 3: WRAP-UP ──
+    {
+      section: 'WRAP-UP',
+      label: 'Certificate',
+      href: '/student/certificate',
+      icon: <Award size={18} />,
+      locked: !isProjectCompleted,
+      lockTooltip: 'Unlocks after all project milestones are completed & evaluated',
+      badge: !isProjectCompleted ? 'locked' : 'ready'
+    }
   ]
 
   return (
@@ -138,7 +189,8 @@ export default function StudentPortal() {
 
         <Route path="mentors"        element={<MentorMatching />} />
         <Route path="workspace"      element={<ProjectWorkspace />} />
-        <Route path="chat"           element={<TeamChat />} />
+        {/* Fold chat route seamlessly into workspace */}
+        <Route path="chat"           element={<Navigate to="/student/workspace?tab=chat" replace />} />
         <Route path="progress"       element={<ProgressPortal />} />
         <Route path="progress/student/:studentId?" element={<StudentProgressPage />} />
         <Route path="certificate"    element={<CertificatePage />} />

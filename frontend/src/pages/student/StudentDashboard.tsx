@@ -24,6 +24,9 @@ export default function StudentDashboard() {
   const { user } = useSelector((s: RootState) => s.auth)
   const [stats, setStats] = useState<DashboardStats>({})
   const [teams, setTeams] = useState<any[]>([])
+  const [milestones, setMilestones] = useState<any[]>([])
+  const [progressPercent, setProgressPercent] = useState<number>(0)
+  const [myIdeasCount, setMyIdeasCount] = useState<number>(0)
   const [loading, setLoading] = useState(true)
   const [uploadingPdf, setUploadingPdf] = useState(false)
   const [referenceMarkdown, setReferenceMarkdown] = useState<string | null>(null)
@@ -31,8 +34,14 @@ export default function StudentDashboard() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [teamsRes] = await Promise.all([api.get('/teams/my')])
+        const [teamsRes, ideasRes] = await Promise.all([
+          api.get('/teams/my').catch(() => ({ data: [] })),
+          api.get('/projects/my').catch(() => ({ data: [] }))
+        ])
+
         setTeams(teamsRes.data)
+        setMyIdeasCount(Array.isArray(ideasRes.data) ? ideasRes.data.length : 0)
+
         if (teamsRes.data.length > 0) {
           const team = teamsRes.data[0]
           setStats({
@@ -43,9 +52,34 @@ export default function StudentDashboard() {
           if (team.project?.referenceSummary) {
             setReferenceMarkdown(team.project.referenceSummary)
           }
+
+          // Fetch real team milestones & progress
+          try {
+            const [milestonesRes, progressRes] = await Promise.all([
+              api.get(`/milestones/team/${team.id}`).catch(() => ({ data: [] })),
+              api.get(`/progress/team/${team.id}`).catch(() => ({ data: null }))
+            ])
+
+            const msList = Array.isArray(milestonesRes.data) ? milestonesRes.data : []
+            setMilestones(msList)
+
+            if (progressRes.data && typeof progressRes.data.overallProgress === 'number') {
+              setProgressPercent(progressRes.data.overallProgress)
+            } else if (msList.length > 0) {
+              const approved = msList.filter((m: any) => m.status === 'APPROVED').length
+              setProgressPercent(Math.round((approved / msList.length) * 100))
+            } else {
+              setProgressPercent(0)
+            }
+          } catch {
+            setProgressPercent(0)
+          }
+        } else {
+          setProgressPercent(0)
+          setMilestones([])
         }
       } catch (e) {
-        console.error(e)
+        console.error('Error loading student dashboard data', e)
       } finally {
         setLoading(false)
       }
@@ -81,11 +115,37 @@ export default function StudentDashboard() {
     multiple: false
   })
 
+  const approvedCount = milestones.filter(m => m.status === 'APPROVED').length
+
   const kpis = [
-    { label: 'Team Status', value: teams.length > 0 ? teams[0].status : 'No Team', icon: <Users size={20} />, color: 'from-primary-600 to-violet-600', link: '/student/team' },
-    { label: 'Progress Track', value: '50%', icon: <TrendingUp size={20} />, color: 'from-teal-600 to-emerald-600', link: '/student/progress' },
-    { label: 'Milestones', value: teams.length > 0 ? '3 Phases' : '—', icon: <CheckCircle2 size={20} />, color: 'from-amber-600 to-orange-600', link: '/student/workspace' },
-    { label: 'Ideas Posted', value: '—', icon: <Lightbulb size={20} />, color: 'from-pink-600 to-rose-600', link: '/student/ideas' },
+    {
+      label: 'Team Status',
+      value: teams.length > 0 ? (teams[0].status || 'ACTIVE') : 'No Team',
+      icon: <Users size={20} />,
+      color: 'from-primary-600 to-violet-600',
+      link: teams.length > 0 ? '/student/team-portal' : '/student/team'
+    },
+    {
+      label: 'Progress Track',
+      value: `${progressPercent}%`,
+      icon: <TrendingUp size={20} />,
+      color: 'from-teal-600 to-emerald-600',
+      link: '/student/progress'
+    },
+    {
+      label: 'Milestones',
+      value: teams.length > 0 ? (milestones.length > 0 ? `${approvedCount}/${milestones.length} Done` : '0 Phases') : '—',
+      icon: <CheckCircle2 size={20} />,
+      color: 'from-amber-600 to-orange-600',
+      link: '/student/workspace'
+    },
+    {
+      label: 'Ideas Posted',
+      value: myIdeasCount > 0 ? `${myIdeasCount} Idea${myIdeasCount > 1 ? 's' : ''}` : '0 Posted',
+      icon: <Lightbulb size={20} />,
+      color: 'from-pink-600 to-rose-600',
+      link: '/student/ideas'
+    },
   ]
 
   return (
@@ -93,11 +153,11 @@ export default function StudentDashboard() {
       {/* Welcome header */}
       <div>
         <p className="section-subhead mb-1">Student Dashboard</p>
-        <h1 className="text-2xl font-bold text-white" style={{ fontFamily: 'Outfit, sans-serif' }}>
+        <h1 className="text-2xl font-bold text-slate-800" style={{ fontFamily: 'Outfit, sans-serif' }}>
           Good {new Date().getHours() < 12 ? 'morning' : new Date().getHours() < 17 ? 'afternoon' : 'evening'},{' '}
           <span className="gradient-text-primary">{user?.name?.split(' ')[0]}</span> 👋
         </h1>
-        <p className="text-white/45 mt-1 text-sm">Here's what's happening with your capstone project.</p>
+        <p className="text-slate-500 mt-1 text-sm">Here's what's happening with your capstone project.</p>
       </div>
 
       {/* KPI Cards */}
@@ -110,11 +170,11 @@ export default function StudentDashboard() {
             transition={{ delay: i * 0.08 }}
           >
             <Link to={kpi.link} className="stat-card card-hover block">
-              <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${kpi.color} flex items-center justify-center text-white mb-2`}>
+              <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${kpi.color} flex items-center justify-center text-white mb-2 shadow-xs`}>
                 {kpi.icon}
               </div>
-              <div className="text-xl font-bold text-white" style={{ fontFamily: 'Outfit, sans-serif' }}>{kpi.value}</div>
-              <div className="text-xs text-white/45">{kpi.label}</div>
+              <div className="text-xl font-bold text-slate-800" style={{ fontFamily: 'Outfit, sans-serif' }}>{kpi.value}</div>
+              <div className="text-xs text-slate-500">{kpi.label}</div>
             </Link>
           </motion.div>
         ))}
@@ -125,47 +185,56 @@ export default function StudentDashboard() {
         {/* Team Overview */}
         <div className="card p-6 lg:col-span-2">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="font-semibold text-white" style={{ fontFamily: 'Outfit, sans-serif' }}>My Team</h2>
-            <Link to="/student/team" className="text-primary-300 hover:text-primary-200 text-sm flex items-center gap-1">
+            <h2 className="font-semibold text-slate-800" style={{ fontFamily: 'Outfit, sans-serif' }}>My Team</h2>
+            <Link to={teams.length > 0 ? '/student/team-portal' : '/student/team'} className="text-primary-600 hover:text-primary-700 font-medium text-sm flex items-center gap-1">
               View <ArrowRight size={14} />
             </Link>
           </div>
           {teams.length === 0 ? (
             <div className="text-center py-10">
-              <Users size={40} className="mx-auto text-white/20 mb-3" />
-              <p className="text-white/40 text-sm">You haven't joined a team yet.</p>
+              <Users size={40} className="mx-auto text-slate-300 mb-3" />
+              <p className="text-slate-500 text-sm">You haven't joined a team yet.</p>
               <Link to="/student/team" className="btn-primary text-sm mt-4 inline-flex">Find Teammates</Link>
             </div>
           ) : (
             <div>
               <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 bg-primary-600/20 border border-primary-500/30 rounded-xl flex items-center justify-center text-primary-400 font-bold">
+                <div className="w-10 h-10 bg-primary-50 border border-primary-200 rounded-xl flex items-center justify-center text-primary-600 font-bold">
                   {teams[0].teamName?.[0]}
                 </div>
                 <div>
-                  <div className="font-semibold text-white">{teams[0].teamName}</div>
-                  <div className="text-xs text-white/50">{teams[0].project?.title}</div>
+                  <div className="font-semibold text-slate-800">{teams[0].teamName}</div>
+                  <div className="text-xs text-slate-500">{teams[0].project?.title || 'No project assigned yet'}</div>
                 </div>
                 <span className={`badge ml-auto ${teams[0].isAtRisk ? 'badge-danger' : 'badge-accent'}`}>
                   {teams[0].isAtRisk ? '⚠️ At Risk' : teams[0].status}
                 </span>
               </div>
 
-              {/* Milestone mini-progress */}
-              <div className="space-y-2">
-                {['Review 1', 'Review 2', 'Final Submission'].map((m, i) => (
-                  <div key={m} className="flex items-center gap-3 text-sm">
-                    <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
-                      i === 0 ? 'bg-accent text-white' : 'bg-surface-100 text-white/40'
-                    }`}>
-                      {i + 1}
+              {/* Real Milestone Progress */}
+              <div className="space-y-2.5 mt-4">
+                <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Milestone Breakdown</div>
+                {milestones.length === 0 ? (
+                  <p className="text-xs text-slate-400 italic">No milestones assigned to this project yet.</p>
+                ) : (
+                  milestones.map((m, i) => (
+                    <div key={m.id || i} className="flex items-center gap-3 text-sm p-2 rounded-lg bg-slate-50 border border-slate-100">
+                      <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
+                        m.status === 'APPROVED' ? 'bg-emerald-600 text-white' :
+                        m.status === 'SUBMITTED' ? 'bg-amber-500 text-white' : 'bg-slate-200 text-slate-600'
+                      }`}>
+                        {i + 1}
+                      </div>
+                      <span className="text-slate-700 font-medium flex-1 truncate">{m.title}</span>
+                      <span className={`badge text-[11px] ${
+                        m.status === 'APPROVED' ? 'badge-accent' :
+                        m.status === 'SUBMITTED' ? 'badge-warning' : 'badge-primary'
+                      }`}>
+                        {m.status}
+                      </span>
                     </div>
-                    <span className="text-white/70 flex-1">{m}</span>
-                    <span className={`badge ${i === 0 ? 'badge-accent' : 'badge-primary'}`}>
-                      {i === 0 ? 'Completed' : 'Pending'}
-                    </span>
-                  </div>
-                ))}
+                  ))
+                )}
               </div>
             </div>
           )}
@@ -173,19 +242,19 @@ export default function StudentDashboard() {
 
         {/* Quick Actions */}
         <div className="card p-6">
-          <h2 className="font-semibold text-white mb-4" style={{ fontFamily: 'Outfit, sans-serif' }}>Quick Actions</h2>
+          <h2 className="font-semibold text-slate-800 mb-4" style={{ fontFamily: 'Outfit, sans-serif' }}>Quick Actions</h2>
           <div className="space-y-2">
             {[
-              { label: 'Browse Project Ideas', href: '/student/ideas', icon: <Lightbulb size={16} />, color: 'text-amber-400' },
-              { label: 'Find Teammates',        href: '/student/team',    icon: <Users size={16} />,     color: 'text-primary-400' },
-              { label: 'Request a Mentor',      href: '/student/mentors', icon: <BookOpen size={16} />,  color: 'text-emerald-400' },
-              { label: 'Progress Portal',      href: '/student/progress', icon: <TrendingUp size={16} />, color: 'text-teal-400' },
+              { label: 'Browse Project Ideas', href: '/student/ideas', icon: <Lightbulb size={16} />, color: 'text-amber-500' },
+              { label: 'Find Teammates',        href: '/student/team',    icon: <Users size={16} />,     color: 'text-primary-600' },
+              { label: 'Request a Mentor',      href: '/student/mentors', icon: <BookOpen size={16} />,  color: 'text-emerald-600' },
+              { label: 'Progress Portal',      href: '/student/progress', icon: <TrendingUp size={16} />, color: 'text-teal-600' },
             ].map(action => (
               <Link key={action.href} to={action.href}
-                className="flex items-center gap-3 p-3 rounded-xl hover:bg-white/5 transition-colors group">
+                className="flex items-center gap-3 p-3 rounded-xl hover:bg-slate-50 border border-transparent hover:border-slate-200 transition-colors group">
                 <span className={action.color}>{action.icon}</span>
-                <span className="text-sm text-white/70 group-hover:text-white transition-colors">{action.label}</span>
-                <ArrowRight size={14} className="ml-auto text-white/20 group-hover:text-white/50 transition-colors" />
+                <span className="text-sm text-slate-700 group-hover:text-slate-900 font-medium transition-colors">{action.label}</span>
+                <ArrowRight size={14} className="ml-auto text-slate-300 group-hover:text-slate-500 transition-colors" />
               </Link>
             ))}
           </div>
@@ -195,8 +264,8 @@ export default function StudentDashboard() {
       {/* Senior Reference Document Section */}
       {teams.length > 0 && teams[0].project && (
         <div className="card p-6 animate-fade-in mt-6">
-          <h2 className="font-semibold text-white mb-4 flex items-center gap-2" style={{ fontFamily: 'Outfit, sans-serif' }}>
-            <BookOpen size={18} className="text-primary-300" />
+          <h2 className="font-semibold text-slate-800 mb-4 flex items-center gap-2" style={{ fontFamily: 'Outfit, sans-serif' }}>
+            <BookOpen size={18} className="text-primary-600" />
             Convert Project to Senior Reference Document
           </h2>
           
@@ -204,27 +273,27 @@ export default function StudentDashboard() {
             <div 
               {...getRootProps()} 
               className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-colors ${
-                isDragActive ? 'border-primary-500 bg-primary-500/10' : 'border-white/20 hover:border-white/40 hover:bg-white/5'
+                isDragActive ? 'border-primary-500 bg-primary-50' : 'border-slate-300 hover:border-primary-400 hover:bg-slate-50'
               }`}
             >
               <input {...getInputProps()} />
               <div className="flex flex-col items-center justify-center space-y-3">
-                <BookOpen size={32} className={isDragActive ? 'text-primary-400' : 'text-white/40'} />
+                <BookOpen size={32} className={isDragActive ? 'text-primary-600' : 'text-slate-400'} />
                 {uploadingPdf ? (
-                  <p className="text-white/70">Analyzing document with AI...</p>
+                  <p className="text-slate-600">Analyzing document with AI...</p>
                 ) : isDragActive ? (
-                  <p className="text-primary-300">Drop the PDF here...</p>
+                  <p className="text-primary-600">Drop the PDF here...</p>
                 ) : (
                   <>
-                    <p className="text-white/70">Drag & drop your project PDF here, or click to select</p>
-                    <p className="text-xs text-white/40">Only .pdf files are supported</p>
+                    <p className="text-slate-600 font-medium">Drag & drop your project PDF here, or click to select</p>
+                    <p className="text-xs text-slate-400">Only .pdf files are supported</p>
                   </>
                 )}
               </div>
             </div>
           ) : (
-            <div className="bg-surface-100 rounded-xl p-6 border border-white/10">
-              <div className="prose prose-invert max-w-none prose-h2:text-primary-400 prose-a:text-accent-400">
+            <div className="bg-slate-50 rounded-xl p-6 border border-slate-200">
+              <div className="prose max-w-none prose-h2:text-primary-600 prose-a:text-teal-600">
                 <ReactMarkdown>{referenceMarkdown}</ReactMarkdown>
               </div>
             </div>

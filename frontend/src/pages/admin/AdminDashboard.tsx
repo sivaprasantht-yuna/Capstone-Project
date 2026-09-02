@@ -49,8 +49,8 @@ export default function AdminDashboard() {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="text-center">
-          <div className="w-10 h-10 border-2 border-primary-500/30 border-t-primary-500 rounded-full animate-spin mx-auto mb-3" />
-          <p className="text-white/50 text-sm">Loading analytics...</p>
+          <div className="w-10 h-10 border-2 border-primary-500/30 border-t-primary-600 rounded-full animate-spin mx-auto mb-3" />
+          <p className="text-slate-500 text-sm">Loading analytics...</p>
         </div>
       </div>
     )
@@ -59,8 +59,8 @@ export default function AdminDashboard() {
   return (
     <div className="space-y-6 animate-fade-in">
       <div>
-        <h1 className="text-2xl font-bold text-white">Admin Overview</h1>
-        <p className="text-white/50 text-sm mt-1">Semester-wide capstone project analytics</p>
+        <h1 className="text-2xl font-bold text-slate-800">Admin Overview</h1>
+        <p className="text-slate-500 text-sm mt-1">Semester-wide capstone project analytics</p>
       </div>
 
       {/* KPI Grid */}
@@ -71,14 +71,14 @@ export default function AdminDashboard() {
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: i * 0.06 }}
-            className="glass-card p-4 flex flex-col gap-3"
+            className="card p-4 flex flex-col gap-3 shadow-xs hover:border-slate-300 transition-all"
           >
-            <div className={`w-9 h-9 rounded-xl bg-gradient-to-br ${kpi.color} flex items-center justify-center text-white`}>
+            <div className={`w-9 h-9 rounded-xl bg-gradient-to-br ${kpi.color} flex items-center justify-center text-white shadow-xs`}>
               {kpi.icon}
             </div>
             <div>
-              <div className="text-2xl font-bold text-white">{kpi.value}</div>
-              <div className="text-xs text-white/40">{kpi.label}</div>
+              <div className="text-2xl font-bold text-slate-800">{kpi.value}</div>
+              <div className="text-xs text-slate-500 font-medium">{kpi.label}</div>
             </div>
           </motion.div>
         ))}
@@ -88,8 +88,8 @@ export default function AdminDashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
         {/* Domain Distribution Pie */}
-        <div className="glass-card p-6">
-          <h2 className="font-semibold text-white mb-4">Project Domain Distribution</h2>
+        <div className="card p-6 shadow-xs">
+          <h2 className="font-semibold text-slate-800 mb-4">Project Domain Distribution</h2>
           {domainChartData.length > 0 ? (
             <ResponsiveContainer width="100%" height={220}>
               <PieChart>
@@ -103,42 +103,42 @@ export default function AdminDashboard() {
                   ))}
                 </Pie>
                 <Tooltip
-                  contentStyle={{ background: '#1e293b', border: '1px solid rgba(99,102,241,0.2)', borderRadius: 12 }}
-                  itemStyle={{ color: '#f1f5f9' }}
+                  contentStyle={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: 12, boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }}
+                  itemStyle={{ color: '#1e293b' }}
                 />
               </PieChart>
             </ResponsiveContainer>
           ) : (
-            <div className="h-52 flex items-center justify-center text-white/30 text-sm">No domain data yet</div>
+            <div className="h-52 flex items-center justify-center text-slate-400 text-sm">No domain data yet</div>
           )}
         </div>
 
         {/* Department Participation Bar */}
-        <div className="glass-card p-6">
-          <h2 className="font-semibold text-white mb-4">Department Participation</h2>
+        <div className="card p-6 shadow-xs">
+          <h2 className="font-semibold text-slate-800 mb-4">Department Participation</h2>
           {deptChartData.length > 0 ? (
             <ResponsiveContainer width="100%" height={220}>
               <BarChart data={deptChartData} margin={{ top: 5, right: 10, left: -20, bottom: 5 }}>
-                <XAxis dataKey="dept" tick={{ fill: '#94a3b8', fontSize: 11 }} axisLine={false} tickLine={false} />
+                <XAxis dataKey="dept" tick={{ fill: '#64748b', fontSize: 11 }} axisLine={false} tickLine={false} />
                 <YAxis tick={{ fill: '#64748b', fontSize: 11 }} axisLine={false} tickLine={false} />
                 <Tooltip
-                  contentStyle={{ background: '#1e293b', border: '1px solid rgba(99,102,241,0.2)', borderRadius: 12 }}
-                  itemStyle={{ color: '#f1f5f9' }}
-                  cursor={{ fill: 'rgba(99,102,241,0.1)' }}
+                  contentStyle={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: 12, boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }}
+                  itemStyle={{ color: '#1e293b' }}
+                  cursor={{ fill: 'rgba(26,95,180,0.06)' }}
                 />
-                <Bar dataKey="count" fill="#6366f1" radius={[6, 6, 0, 0]} />
+                <Bar dataKey="count" fill="#1a5fb4" radius={[6, 6, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           ) : (
-            <div className="h-52 flex items-center justify-center text-white/30 text-sm">No participation data yet</div>
+            <div className="h-52 flex items-center justify-center text-slate-400 text-sm">No participation data yet</div>
           )}
         </div>
       </div>
 
       {/* Mentor Load Distribution */}
       {stats && stats.mentorLoadDistribution.length > 0 && (
-        <div className="glass-card p-6">
-          <h2 className="font-semibold text-white mb-4">Mentor Workload Distribution</h2>
+        <div className="card p-6 shadow-xs">
+          <h2 className="font-semibold text-slate-800 mb-4">Mentor Workload Distribution</h2>
           <div className="space-y-3">
             {stats.mentorLoadDistribution.map((mentor, i) => (
               <motion.div
@@ -148,8 +148,8 @@ export default function AdminDashboard() {
                 transition={{ delay: i * 0.06 }}
                 className="flex items-center gap-4"
               >
-                <div className="w-36 text-sm text-white/70 text-right flex-shrink-0 truncate">{mentor.name}</div>
-                <div className="flex-1 match-bar">
+                <div className="w-36 text-sm text-slate-700 font-medium text-right flex-shrink-0 truncate">{mentor.name}</div>
+                <div className="flex-1 match-bar bg-slate-100">
                   <motion.div
                     className="match-bar-fill h-full rounded-full"
                     style={{
@@ -162,10 +162,10 @@ export default function AdminDashboard() {
                     transition={{ delay: i * 0.06 + 0.3, duration: 0.6 }}
                   />
                 </div>
-                <div className="text-xs text-white/50 w-20 flex-shrink-0">
+                <div className="text-xs text-slate-500 w-20 flex-shrink-0">
                   {mentor.currentLoad}/{mentor.maxCapacity} teams
                 </div>
-                <span className={`badge ${mentor.utilizationPct > 80 ? 'badge-danger' : mentor.utilizationPct > 50 ? 'badge-warning' : 'badge-accent'}`}>
+                <span className={`badge ${mentor.utilizationPct > 80 ? 'badge-danger' : mentor.utilizationPct > 50 ? 'badge-warning' : 'badge-teal'}`}>
                   {mentor.utilizationPct.toFixed(0)}%
                 </span>
               </motion.div>

@@ -40,14 +40,14 @@ export default function DomainMultiSelect({
     <div className="space-y-2">
       {label && (
         <div className="flex items-center justify-between">
-          <label className="text-xs font-semibold uppercase tracking-wider text-white/70">
+          <label className="text-xs font-semibold uppercase tracking-wider text-slate-600">
             {label}
           </label>
           <span
             className={`text-xs font-medium px-2 py-0.5 rounded-full ${
               maxReached
-                ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
-                : 'bg-primary-500/15 text-primary-300'
+                ? 'bg-amber-50 text-amber-800 border border-amber-200'
+                : 'bg-primary-50 text-primary-700'
             }`}
           >
             {selectedDomains.length} / {maxDomains} Selected
@@ -57,20 +57,20 @@ export default function DomainMultiSelect({
 
       {/* Selected Domain Chips */}
       {selectedDomains.length > 0 && (
-        <div className="flex flex-wrap gap-2 p-2.5 bg-surface-100/50 rounded-xl border border-white/5">
+        <div className="flex flex-wrap gap-2 p-2.5 bg-slate-50 rounded-xl border border-slate-200">
           {selectedDomains.map(domain => (
             <motion.span
               key={domain}
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
-              className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-semibold bg-teal/20 text-teal-300 border border-teal/30"
+              className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-semibold bg-teal-50 text-teal-800 border border-teal-200"
             >
               <span>{domain}</span>
               {!disabled && (
                 <button
                   type="button"
                   onClick={() => toggleDomain(domain)}
-                  className="text-white/40 hover:text-white"
+                  className="text-slate-400 hover:text-slate-700"
                 >
                   ×
                 </button>
@@ -81,19 +81,19 @@ export default function DomainMultiSelect({
       )}
 
       {/* Domain Selection Grid */}
-      <div className="p-3 bg-surface-100/30 border border-white/10 rounded-2xl space-y-3">
+      <div className="p-3 bg-slate-50 border border-slate-200 rounded-2xl space-y-3">
         {/* Search */}
         <input
           type="text"
           value={search}
           onChange={e => setSearch(e.target.value)}
           placeholder="Filter domains (e.g. Robotics, AI, Web, Cloud)..."
-          className="w-full bg-surface-100 border border-white/10 rounded-xl px-3.5 py-1.5 text-xs text-white placeholder-white/30 outline-none focus:border-primary-500"
+          className="w-full bg-white border border-slate-300 rounded-xl px-3.5 py-1.5 text-xs text-slate-800 placeholder-slate-400 outline-none focus:border-primary-500"
           disabled={disabled}
         />
 
         {maxReached && (
-          <div className="flex items-center gap-1.5 text-xs text-amber-300 bg-amber-500/10 p-2 rounded-lg border border-amber-500/20">
+          <div className="flex items-center gap-1.5 text-xs text-amber-800 bg-amber-50 p-2 rounded-lg border border-amber-200">
             <Info size={14} className="flex-shrink-0" />
             <span>Maximum {maxDomains} domains allowed. Deselect one to choose another.</span>
           </div>
@@ -112,10 +112,10 @@ export default function DomainMultiSelect({
                 onClick={() => toggleDomain(domain)}
                 className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-all flex items-center gap-1.5 ${
                   isSelected
-                    ? 'bg-teal text-white shadow-glow font-bold'
+                    ? 'bg-teal text-white shadow-sm font-bold'
                     : isSelectable
-                    ? 'bg-surface-100 text-white/70 hover:bg-white/10 hover:text-white border border-white/5'
-                    : 'bg-white/5 text-white/25 cursor-not-allowed border border-white/5'
+                    ? 'bg-white text-slate-700 hover:bg-slate-100 hover:text-slate-900 border border-slate-200 shadow-xs'
+                    : 'bg-slate-100 text-slate-400 cursor-not-allowed border border-slate-200'
                 }`}
               >
                 {isSelected && <Check size={12} />}

@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ChevronDown, Check } from 'lucide-react'
 
@@ -16,6 +16,7 @@ interface CustomSelectProps {
   required?: boolean
   className?: string
   id?: string
+  sort?: boolean
 }
 
 export default function CustomSelect({
@@ -26,14 +27,36 @@ export default function CustomSelect({
   required = false,
   className = '',
   id,
+  sort = true,
 }: CustomSelectProps) {
   const [isOpen, setIsOpen] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
 
-  // Normalize options to object format
-  const normalizedOptions: SelectOption[] = options.map(opt =>
-    typeof opt === 'string' ? { value: opt, label: opt } : opt
-  )
+  // Normalize and sort options
+  const normalizedOptions: SelectOption[] = useMemo(() => {
+    const raw = options.map(opt =>
+      typeof opt === 'string' ? { value: opt, label: opt } : opt
+    )
+
+    if (!sort) return raw
+
+    // Separate empty/all placeholder option ('', 'all', etc.) to keep at top
+    const topItems = raw.filter(opt => opt.value === '' || opt.value.toLowerCase() === 'all')
+    const sortableItems = raw.filter(opt => opt.value !== '' && opt.value.toLowerCase() !== 'all')
+
+    // Sort sortable items alphabetically / numerically
+    sortableItems.sort((a, b) => {
+      // Check if numeric
+      const numA = Number(a.value)
+      const numB = Number(b.value)
+      if (!isNaN(numA) && !isNaN(numB)) {
+        return numA - numB
+      }
+      return a.label.localeCompare(b.label, undefined, { sensitivity: 'base', numeric: true })
+    })
+
+    return [...topItems, ...sortableItems]
+  }, [options, sort])
 
   // Close dropdown on click outside
   useEffect(() => {
@@ -74,17 +97,17 @@ export default function CustomSelect({
         onClick={() => setIsOpen(!isOpen)}
         className="input-dark flex items-center justify-between gap-3 text-left cursor-pointer w-full"
         style={{
-          borderColor: isOpen ? 'rgba(26,95,180,0.6)' : 'rgba(26,95,180,0.2)',
-          boxShadow: isOpen ? '0 0 0 3px rgba(26,95,180,0.15)' : 'none',
+          borderColor: isOpen ? '#1a5fb4' : '#cbd5e1',
+          boxShadow: isOpen ? '0 0 0 3px rgba(26,95,180,0.12)' : 'none',
         }}
       >
-        <span className={`truncate text-sm ${!value ? 'text-white/35' : 'text-white font-medium'}`}>
+        <span className={`truncate text-sm ${!value ? 'text-slate-400' : 'text-slate-800 font-medium'}`}>
           {selectedOption ? selectedOption.label : placeholder}
         </span>
         <ChevronDown
           size={16}
-          className={`text-white/40 transition-transform duration-200 flex-shrink-0 ${
-            isOpen ? 'rotate-180 text-primary-300' : ''
+          className={`text-slate-400 transition-transform duration-200 flex-shrink-0 ${
+            isOpen ? 'rotate-180 text-primary-600' : ''
           }`}
         />
       </button>
@@ -97,11 +120,9 @@ export default function CustomSelect({
             animate={{ opacity: 1, y: 4, scale: 1 }}
             exit={{ opacity: 0, y: -4, scale: 0.98 }}
             transition={{ duration: 0.15, ease: 'easeOut' }}
-            className="absolute left-0 right-0 top-full z-50 min-w-[200px] max-h-60 overflow-y-auto rounded-xl border shadow-card backdrop-blur-md custom-scrollbar py-1"
+            className="absolute left-0 right-0 top-full z-50 min-w-[200px] max-h-60 overflow-y-auto rounded-xl border border-slate-200 bg-white shadow-xl custom-scrollbar py-1"
             style={{
-              background: '#07192d',
-              borderColor: 'rgba(26,95,180,0.3)',
-              boxShadow: '0 12px 36px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(26, 95, 180, 0.2)',
+              boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05)',
             }}
           >
             {normalizedOptions.map(option => {
@@ -114,15 +135,15 @@ export default function CustomSelect({
                   onClick={() => handleSelect(option)}
                   className={`w-full flex items-center justify-between px-4 py-2.5 text-sm text-left transition-colors cursor-pointer ${
                     option.disabled
-                      ? 'text-white/20 cursor-not-allowed bg-transparent'
+                      ? 'text-slate-300 cursor-not-allowed bg-transparent'
                       : isSelected
-                      ? 'bg-primary-600/25 text-white font-semibold'
-                      : 'text-white/75 hover:bg-primary-600/15 hover:text-white'
+                      ? 'bg-primary-50 text-primary-700 font-semibold'
+                      : 'text-slate-700 hover:bg-slate-50 hover:text-slate-900'
                   }`}
                   style={{ fontFamily: 'Outfit, Inter, sans-serif' }}
                 >
                   <span className="truncate">{option.label}</span>
-                  {isSelected && <Check size={14} className="text-primary-300 flex-shrink-0 ml-2" />}
+                  {isSelected && <Check size={14} className="text-primary-600 flex-shrink-0 ml-2" />}
                 </button>
               )
             })}

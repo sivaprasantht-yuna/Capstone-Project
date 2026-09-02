@@ -20,7 +20,7 @@ export default function AdminPortal() {
     <PortalLayout
       navItems={NAV_ITEMS}
       portalTitle="Admin Dashboard"
-      portalColor="from-amber-400 to-orange-400"
+      portalColor="from-amber-600 to-orange-600"
     >
       <Routes>
         <Route path="/"          element={<Navigate to="dashboard" replace />} />

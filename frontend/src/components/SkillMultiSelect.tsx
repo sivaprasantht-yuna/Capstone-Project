@@ -66,10 +66,10 @@ export default function SkillMultiSelect({
     <div ref={containerRef} className="space-y-2 relative">
       {label && (
         <div className="flex items-center justify-between">
-          <label className="text-xs font-semibold uppercase tracking-wider text-white/70">
+          <label className="text-xs font-semibold uppercase tracking-wider text-slate-600">
             {label}
           </label>
-          <span className="text-xs text-white/40">
+          <span className="text-xs text-slate-400">
             {selectedSkills.length} selected {maxSkills ? `(max ${maxSkills})` : ''}
           </span>
         </div>
@@ -78,12 +78,12 @@ export default function SkillMultiSelect({
       {/* Trigger & Selected Badges Area */}
       <div
         onClick={() => setIsOpen(true)}
-        className={`input-dark min-h-[50px] p-2.5 flex flex-wrap items-center gap-1.5 cursor-pointer transition-all ${
-          isOpen ? 'border-primary-500 shadow-glow' : 'border-white/10'
+        className={`input-dark min-h-[50px] p-2.5 flex flex-wrap items-center gap-1.5 cursor-pointer transition-all bg-white border ${
+          isOpen ? 'border-primary-500 ring-2 ring-primary-500/10' : 'border-slate-300'
         }`}
       >
         {selectedSkills.length === 0 && (
-          <span className="text-white/35 text-sm px-1.5">{placeholder}</span>
+          <span className="text-slate-400 text-sm px-1.5">{placeholder}</span>
         )}
 
         {selectedSkills.map(skill => (
@@ -92,7 +92,7 @@ export default function SkillMultiSelect({
             initial={{ scale: 0.85, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.85, opacity: 0 }}
-            className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-medium bg-primary-600/25 text-primary-200 border border-primary-500/30 group hover:bg-danger/20 hover:text-red-300 hover:border-danger/40 transition-colors"
+            className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-medium bg-primary-50 text-primary-700 border border-primary-200 group hover:bg-red-50 hover:text-red-700 hover:border-red-200 transition-colors"
           >
             <span>{skill}</span>
             <button
@@ -101,7 +101,7 @@ export default function SkillMultiSelect({
                 e.stopPropagation()
                 removeSkill(skill)
               }}
-              className="text-white/40 group-hover:text-red-300 hover:scale-110 transition-transform"
+              className="text-slate-400 group-hover:text-red-600 hover:scale-110 transition-transform"
             >
               <X size={13} />
             </button>
@@ -116,14 +116,14 @@ export default function SkillMultiSelect({
                 e.stopPropagation()
                 onChange([])
               }}
-              className="text-xs text-white/40 hover:text-white transition-colors"
+              className="text-xs text-slate-400 hover:text-slate-700 transition-colors"
             >
               Clear
             </button>
           )}
           <ChevronDown
             size={16}
-            className={`text-white/40 transition-transform duration-200 ${isOpen ? 'rotate-180 text-primary-400' : ''}`}
+            className={`text-slate-400 transition-transform duration-200 ${isOpen ? 'rotate-180 text-primary-600' : ''}`}
           />
         </div>
       </div>
@@ -136,23 +136,21 @@ export default function SkillMultiSelect({
             animate={{ opacity: 1, y: 4, scale: 1 }}
             exit={{ opacity: 0, y: -6, scale: 0.98 }}
             transition={{ duration: 0.18, ease: 'easeOut' }}
-            className="absolute left-0 right-0 top-full z-50 rounded-2xl border shadow-card p-4 custom-scrollbar max-h-80 overflow-y-auto"
+            className="absolute left-0 right-0 top-full z-50 rounded-2xl border border-slate-200 bg-white shadow-2xl p-4 custom-scrollbar max-h-80 overflow-y-auto"
             style={{
-              background: '#07192d',
-              borderColor: 'rgba(26,95,180,0.3)',
-              boxShadow: '0 16px 40px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(26, 95, 180, 0.2)',
+              boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
             }}
           >
             {/* Header info */}
-            <div className="flex items-center justify-between pb-3 mb-3 border-b border-white/10">
-              <div className="flex items-center gap-2 text-xs font-semibold text-primary-300">
+            <div className="flex items-center justify-between pb-3 mb-3 border-b border-slate-100">
+              <div className="flex items-center gap-2 text-xs font-semibold text-primary-700">
                 <Sparkles size={14} />
                 <span>Centralized Engineering Skill Library</span>
               </div>
               <button
                 type="button"
                 onClick={() => setIsOpen(false)}
-                className="text-white/40 hover:text-white text-xs"
+                className="text-slate-400 hover:text-slate-700 text-xs font-medium"
               >
                 Done
               </button>
@@ -160,19 +158,19 @@ export default function SkillMultiSelect({
 
             {/* Search Input */}
             <div className="relative mb-3">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30" size={14} />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
               <input
                 type="text"
                 value={search}
                 onChange={e => setSearch(e.target.value)}
                 placeholder="Search skills (e.g. ROS, React, STM32, SolidWorks)..."
-                className="w-full bg-surface-100 border border-white/10 rounded-xl px-9 py-2 text-xs text-white placeholder-white/30 outline-none focus:border-primary-500"
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-9 py-2 text-xs text-slate-800 placeholder-slate-400 outline-none focus:border-primary-500 focus:bg-white"
                 autoFocus
               />
               {search && (
                 <button
                   onClick={() => setSearch('')}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700"
                 >
                   <X size={14} />
                 </button>
@@ -180,14 +178,14 @@ export default function SkillMultiSelect({
             </div>
 
             {/* Category Filter Horizontal Scroll */}
-            <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-2 mb-3 border-b border-white/5 text-xs">
+            <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-2 mb-3 border-b border-slate-100 text-xs">
               <button
                 type="button"
                 onClick={() => setSelectedCategory('ALL')}
                 className={`px-2.5 py-1 rounded-lg transition-colors whitespace-nowrap ${
                   selectedCategory === 'ALL'
-                    ? 'bg-primary-600 text-white font-medium'
-                    : 'bg-white/5 text-white/50 hover:bg-white/10 hover:text-white'
+                    ? 'bg-primary-600 text-white font-medium shadow-xs'
+                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200 hover:text-slate-900'
                 }`}
               >
                 All Categories
@@ -199,8 +197,8 @@ export default function SkillMultiSelect({
                   onClick={() => setSelectedCategory(cat.category)}
                   className={`px-2.5 py-1 rounded-lg transition-colors whitespace-nowrap ${
                     selectedCategory === cat.category
-                      ? 'bg-primary-600 text-white font-medium'
-                      : 'bg-white/5 text-white/50 hover:bg-white/10 hover:text-white'
+                      ? 'bg-primary-600 text-white font-medium shadow-xs'
+                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200 hover:text-slate-900'
                   }`}
                 >
                   {cat.category}
@@ -211,16 +209,16 @@ export default function SkillMultiSelect({
             {/* Skill Lists by Category */}
             <div className="space-y-4">
               {filteredCategories.length === 0 ? (
-                <div className="py-6 text-center text-xs text-white/40">
+                <div className="py-6 text-center text-xs text-slate-400">
                   No predefined skills matching "{search}".
-                  <p className="text-[11px] text-white/30 mt-1">
+                  <p className="text-[11px] text-slate-400 mt-1">
                     Custom skills are restricted to ensure standardized matching.
                   </p>
                 </div>
               ) : (
                 filteredCategories.map(cat => (
                   <div key={cat.category} className="space-y-1.5">
-                    <div className="text-[11px] font-semibold uppercase tracking-wider text-white/40">
+                    <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
                       {cat.category}
                     </div>
                     <div className="flex flex-wrap gap-1.5">
@@ -233,8 +231,8 @@ export default function SkillMultiSelect({
                             onClick={() => toggleSkill(skill)}
                             className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all flex items-center gap-1 ${
                               isSelected
-                                ? 'bg-primary-500 text-white shadow-glow font-semibold'
-                                : 'bg-surface-100/80 text-white/70 border border-white/5 hover:bg-white/10 hover:text-white'
+                                ? 'bg-primary-600 text-white shadow-xs font-semibold'
+                                : 'bg-slate-50 text-slate-700 border border-slate-200 hover:bg-slate-100 hover:text-slate-900'
                             }`}
                           >
                             {isSelected && <Check size={12} />}

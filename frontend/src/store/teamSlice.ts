@@ -6,10 +6,12 @@ export interface TeamMember {
   role: string        // e.g. "LEADER" | "MEMBER"
   department: string
   rollNumber?: string
-  contactNumber?: string
   techRole?: string   // e.g. "Frontend Developer"
   skills?: string[]
   avatarInitial?: string
+  bio?: string
+  githubLink?: string
+  linkedinLink?: string
 }
 
 export interface TeamState {
