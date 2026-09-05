@@ -1,12 +1,13 @@
 /**
- * Native WebSocket client for the Unified FastAPI backend.
- * Replaces the previous STOMP/SockJS implementation.
+ * Native WebSocket client for the Unified FastAPI backend with Heartbeats & Auto-Reconnection.
  *
  * Protocol:
- *   Connect to  ws://host/ws/chat/{teamId}?token=JWT
+ *   Connect to  ws://host/ws/chat/{teamId}?token=JWT (or ws://host/ws)
+ *   Keep-alive: Ping / Pong heartbeat every 20s
+ *   Auto-reconnect on visibility change (laptop wake) or online event
  *   Send/receive JSON messages:
  *     { type: "CHAT_MESSAGE", content: "...", senderId: N, senderName: "..." }
- *     { type: "READ_RECEIPT", teamId: N, userId: N }
+ *     { type: "PING" } / { type: "PONG" }
  */
 
 import { store } from '../store'
@@ -15,15 +16,18 @@ import { addNotification } from '../store/notificationSlice'
 let socket: WebSocket | null = null
 let connectAttempts = 0
 let retryTimer: ReturnType<typeof setTimeout> | null = null
+let heartbeatTimer: ReturnType<typeof setInterval> | null = null
+let missedHeartbeats = 0
 let currentTeamId: number | null = null
 let messageHandlers: ((msg: ChatMessage) => void)[] = []
+let listenersAttached = false
 
-const MAX_ATTEMPTS  = 6
-const BASE_DELAY_MS = 3000
-const MAX_DELAY_MS  = 60_000
+const BASE_DELAY_MS = 2000
+const MAX_DELAY_MS  = 30_000
+const HEARTBEAT_INTERVAL_MS = 20_000
 
 function getBackoffDelay(): number {
-  return Math.min(BASE_DELAY_MS * Math.pow(2, connectAttempts), MAX_DELAY_MS)
+  return Math.min(BASE_DELAY_MS * Math.pow(1.5, connectAttempts), MAX_DELAY_MS) + (Math.random() * 800)
 }
 
 /** Checks if the backend is reachable before opening a socket. */
@@ -36,23 +40,72 @@ async function isBackendReachable(): Promise<boolean> {
   }
 }
 
-function scheduleReconnect(userId: number) {
-  if (connectAttempts >= MAX_ATTEMPTS) {
-    console.warn('[WS] Max reconnect attempts reached. Giving up until page reload.')
-    return
+function startHeartbeat() {
+  stopHeartbeat()
+  missedHeartbeats = 0
+  heartbeatTimer = setInterval(() => {
+    if (socket && socket.readyState === WebSocket.OPEN) {
+      missedHeartbeats++
+      if (missedHeartbeats > 3) {
+        console.warn('[WS] Heartbeat timeout. Reconnecting...')
+        socket.close()
+        return
+      }
+      try {
+        socket.send(JSON.stringify({ type: 'PING' }))
+      } catch (err) {
+        console.warn('[WS] Heartbeat send failed:', err)
+      }
+    }
+  }, HEARTBEAT_INTERVAL_MS)
+}
+
+function stopHeartbeat() {
+  if (heartbeatTimer) {
+    clearInterval(heartbeatTimer)
+    heartbeatTimer = null
   }
+  missedHeartbeats = 0
+}
+
+function scheduleReconnect(userId: number) {
+  if (retryTimer) clearTimeout(retryTimer)
   const delay = getBackoffDelay()
-  console.log(`[WS] Reconnecting in ${delay / 1000}s (attempt ${connectAttempts + 1}/${MAX_ATTEMPTS})…`)
+  console.log(`[WS] Reconnecting in ${(delay / 1000).toFixed(1)}s (attempt ${connectAttempts + 1})…`)
   retryTimer = setTimeout(() => doConnect(userId), delay)
+}
+
+function setupWindowListeners(userId: number) {
+  if (listenersAttached || typeof window === 'undefined') return
+  listenersAttached = true
+
+  window.addEventListener('online', () => {
+    console.log('[WS] Network online detected. Reconnecting...')
+    connectAttempts = 0
+    if (socket?.readyState !== WebSocket.OPEN) {
+      doConnect(userId)
+    }
+  })
+
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') {
+      if (!socket || socket.readyState === WebSocket.CLOSED || socket.readyState === WebSocket.CLOSING) {
+        console.log('[WS] Tab active & socket closed. Reconnecting...')
+        connectAttempts = 0
+        doConnect(userId)
+      }
+    }
+  })
 }
 
 function doConnect(userId: number) {
   if (socket && (socket.readyState === WebSocket.OPEN || socket.readyState === WebSocket.CONNECTING)) return
 
+  setupWindowListeners(userId)
+
   const { user } = store.getState().auth
   const token = user?.accessToken || ''
 
-  // Use the team-specific WebSocket endpoint if we have a teamId, else the generic one
   const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
   const wsHost = window.location.host
   const teamPath = currentTeamId ? `/ws/chat/${currentTeamId}` : '/ws'
@@ -62,17 +115,22 @@ function doConnect(userId: number) {
 
   socket.onopen = () => {
     connectAttempts = 0
+    startHeartbeat()
     console.log('[WS] Connected to FastAPI WebSocket')
   }
 
   socket.onmessage = (event) => {
     try {
       const data = JSON.parse(event.data)
+      missedHeartbeats = 0
+
+      if (data.type === 'PONG') {
+        return
+      }
 
       if (data.type === 'NOTIFICATION') {
         store.dispatch(addNotification(data))
       } else {
-        // Distribute to all registered message handlers
         const chatMsg: ChatMessage = {
           id: data.id,
           senderId: data.senderId,
@@ -91,23 +149,26 @@ function doConnect(userId: number) {
 
   socket.onclose = () => {
     console.log('[WS] Disconnected')
+    stopHeartbeat()
     connectAttempts++
     scheduleReconnect(userId)
   }
 
   socket.onerror = () => {
-    // onclose will fire after onerror — reconnect handled there
+    // Handled by onclose
   }
 }
 
 export async function connectWebSocket(userId: number): Promise<void> {
   connectAttempts = 0
   if (retryTimer) { clearTimeout(retryTimer); retryTimer = null }
+  stopHeartbeat()
   if (socket) { socket.close(); socket = null }
 
   const reachable = await isBackendReachable()
   if (!reachable) {
-    console.warn('[WS] Backend not reachable — skipping WebSocket connection.')
+    console.warn('[WS] Backend not reachable — will retry.')
+    scheduleReconnect(userId)
     return
   }
 
@@ -118,11 +179,9 @@ export function subscribeToTeamChat(
   teamId: number,
   onMessage: (msg: ChatMessage) => void
 ): () => void {
-  // Store the team id for reconnection and add the handler
   currentTeamId = teamId
   messageHandlers.push(onMessage)
 
-  // If we're connected to a different team (or generic), reconnect to the correct team
   const { user } = store.getState().auth
   if (user?.userId) {
     if (socket) { socket.close(); socket = null }
@@ -149,6 +208,7 @@ export function sendChatMessage(teamId: number, content: string): void {
 
 export function disconnectWebSocket(): void {
   if (retryTimer) { clearTimeout(retryTimer); retryTimer = null }
+  stopHeartbeat()
   messageHandlers = []
   currentTeamId = null
   if (socket) { socket.close(); socket = null }

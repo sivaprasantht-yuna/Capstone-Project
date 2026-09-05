@@ -249,10 +249,10 @@ export default function ProjectWorkspace() {
       ) : (
         <div className="space-y-5">
           {/* ── Workspace Tab Switcher ── */}
-          <div className="flex items-center gap-2 p-1 rounded-2xl bg-slate-100 border border-slate-200 w-fit">
+          <div className="flex items-center gap-1.5 p-1 rounded-2xl bg-slate-100 border border-slate-200 max-w-full overflow-x-auto no-scrollbar scroll-smooth">
             <button
               onClick={() => handleTabChange('milestones')}
-              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all ${
+              className={`flex items-center gap-2 px-3.5 sm:px-4 py-2 rounded-xl text-xs font-semibold whitespace-nowrap flex-shrink-0 transition-all ${
                 activeTab === 'milestones'
                   ? 'bg-white text-primary-700 shadow-xs border border-slate-200'
                   : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/50'
@@ -263,7 +263,7 @@ export default function ProjectWorkspace() {
 
             <button
               onClick={() => handleTabChange('chat')}
-              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all ${
+              className={`flex items-center gap-2 px-3.5 sm:px-4 py-2 rounded-xl text-xs font-semibold whitespace-nowrap flex-shrink-0 transition-all ${
                 activeTab === 'chat'
                   ? 'bg-white text-primary-700 shadow-xs border border-slate-200'
                   : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/50'
@@ -280,7 +280,7 @@ export default function ProjectWorkspace() {
 
             <button
               onClick={() => handleTabChange('docs')}
-              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all ${
+              className={`flex items-center gap-2 px-3.5 sm:px-4 py-2 rounded-xl text-xs font-semibold whitespace-nowrap flex-shrink-0 transition-all ${
                 activeTab === 'docs'
                   ? 'bg-white text-primary-700 shadow-xs border border-slate-200'
                   : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/50'
@@ -359,7 +359,7 @@ export default function ProjectWorkspace() {
                       {/* Drag & Drop File Upload */}
                       <div
                         {...getRootProps()}
-                        className={`border-2 border-dashed rounded-2xl p-8 text-center cursor-pointer transition-colors ${
+                        className={`border-2 border-dashed rounded-2xl p-5 sm:p-8 text-center cursor-pointer transition-colors ${
                           isDragActive ? 'border-primary-500 bg-primary-50/50' : 'border-slate-200 hover:border-primary-400 hover:bg-slate-50'
                         }`}
                       >

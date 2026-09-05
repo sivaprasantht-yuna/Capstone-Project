@@ -1,5 +1,7 @@
+import csv
+import io
 from typing import List, Dict, Any
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Response
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from database import get_db
@@ -121,3 +123,174 @@ def get_at_risk_teams(
             "createdAt": t.created_at
         })
     return res
+
+
+@router.get("/governance-requests")
+def get_admin_governance_requests(
+    current_user: models.User = Depends(require_role(["ADMIN"])),
+    db: Session = Depends(get_db)
+):
+    requests = db.query(models.TeamGovernanceRequest).order_by(
+        models.TeamGovernanceRequest.status.asc(),
+        models.TeamGovernanceRequest.created_at.desc()
+    ).all()
+
+    res = []
+    for r in requests:
+        u = r.user
+        t = r.team
+        res.append({
+            "id": r.id,
+            "teamId": r.team_id,
+            "teamName": t.team_name if t else "Dissolved Team",
+            "userId": r.user_id,
+            "userName": u.name if u else "User",
+            "userRoleInTeam": "LEADER" if r.request_type == "DISMANTLE_TEAM" else "MEMBER",
+            "userDepartment": u.department or "Engineering" if u else "Engineering",
+            "requestType": r.request_type,
+            "reason": r.reason,
+            "status": r.status,
+            "adminNotes": r.admin_notes,
+            "createdAt": r.created_at,
+            "reviewedAt": r.reviewed_at
+        })
+    return res
+
+
+@router.post("/governance-requests/{request_id}/review")
+def review_governance_request(
+    request_id: int,
+    action_data: Dict[str, Any],
+    current_user: models.User = Depends(require_role(["ADMIN"])),
+    db: Session = Depends(get_db)
+):
+    from datetime import datetime
+
+    gov_req = db.query(models.TeamGovernanceRequest).filter(
+        models.TeamGovernanceRequest.id == request_id
+    ).first()
+    if not gov_req:
+        raise HTTPException(status_code=404, detail="Governance request not found")
+
+    action = action_data.get("action", "").upper() # "APPROVE" or "REJECT"
+    admin_notes = action_data.get("adminNotes")
+
+    if action not in ["APPROVE", "REJECT"]:
+        raise HTTPException(status_code=400, detail="Action must be APPROVE or REJECT")
+
+    team = db.query(models.Team).filter(models.Team.id == gov_req.team_id).first()
+
+    if action == "APPROVE":
+        gov_req.status = "APPROVED"
+        gov_req.reviewed_at = datetime.utcnow()
+        gov_req.admin_notes = admin_notes or "Approved by Institutional Admin"
+
+        if gov_req.request_type == "DISMANTLE_TEAM":
+            if team:
+                team.status = "DISSOLVED"
+                # Release all members
+                db.query(models.TeamMember).filter(models.TeamMember.team_id == team.id).delete()
+        elif gov_req.request_type == "LEAVE_TEAM":
+            # Remove this specific member from the team
+            db.query(models.TeamMember).filter(
+                models.TeamMember.team_id == gov_req.team_id,
+                models.TeamMember.user_id == gov_req.user_id
+            ).delete()
+    else: # REJECT
+        gov_req.status = "REJECTED"
+        gov_req.reviewed_at = datetime.utcnow()
+        gov_req.admin_notes = admin_notes or "Rejected by Institutional Admin"
+
+        if gov_req.request_type == "DISMANTLE_TEAM" and team:
+            team.status = "ACTIVE"
+
+    db.commit()
+    return {
+        "message": f"Request {gov_req.status.lower()} successfully",
+        "requestId": gov_req.id,
+        "status": gov_req.status
+    }
+
+
+@router.get("/grades/export")
+def export_cohort_grades(
+    current_user: models.User = Depends(require_role(["ADMIN", "FACULTY"])),
+    db: Session = Depends(get_db)
+):
+    """Exports cohort-wide team grades and milestone evaluations as an RFC4180 CSV spreadsheet."""
+    teams = db.query(models.Team).order_by(models.Team.id.asc()).all()
+
+    output = io.StringIO()
+    writer = csv.writer(output)
+
+    # Header
+    writer.writerow([
+        "Team ID",
+        "Team Name",
+        "Project Title",
+        "Domain",
+        "Team Leader",
+        "Faculty Mentor",
+        "Milestone 1 (Literature)",
+        "Milestone 2 (Architecture)",
+        "Milestone 3 (Implementation)",
+        "Milestone 4 (Viva/Final)",
+        "Total Score (Max 400)",
+        "Percentage",
+        "Team Status"
+    ])
+
+    for t in teams:
+        leader_name = "N/A"
+        for m in (t.members or []):
+            if m.role_in_team in ["LEADER", "Team Lead"]:
+                leader_name = m.user.name if m.user else "Leader"
+                break
+        if leader_name == "N/A" and t.members and t.members[0].user:
+            leader_name = t.members[0].user.name
+
+        mentor_name = "Not Assigned"
+        active_mentorship = next((ms for ms in (t.mentorships or []) if ms.status == "ACCEPTED"), None)
+        if active_mentorship and active_mentorship.faculty:
+            mentor_name = active_mentorship.faculty.name
+
+        # Map milestone points in sequence
+        milestones = sorted(t.milestones or [], key=lambda m: (m.sequence_order or 99, m.id))
+        m_scores = []
+        for i in range(4):
+            if i < len(milestones) and milestones[i].points_reward is not None:
+                m_scores.append(str(milestones[i].points_reward))
+            elif i < len(milestones) and milestones[i].status == "APPROVED":
+                m_scores.append("100")
+            else:
+                m_scores.append("0")
+
+        total = t.total_score or sum(int(s) for s in m_scores)
+        pct = round((total / 400.0) * 100, 1) if total > 0 else 0.0
+
+        writer.writerow([
+            t.id,
+            t.team_name,
+            t.project.title if t.project else "Untitled Project",
+            t.project.domain if t.project else "General",
+            leader_name,
+            mentor_name,
+            m_scores[0],
+            m_scores[1],
+            m_scores[2],
+            m_scores[3],
+            total,
+            f"{pct}%",
+            t.status
+        ])
+
+    csv_content = output.getvalue()
+    return Response(
+        content=csv_content,
+        media_type="text/csv",
+        headers={
+            "Content-Disposition": "attachment; filename=capstone_grades_cohort.csv",
+            "Access-Control-Expose-Headers": "Content-Disposition"
+        }
+    )
+

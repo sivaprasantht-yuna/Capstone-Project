@@ -3,7 +3,7 @@ import { Routes, Route, Navigate } from 'react-router-dom'
 import { useSelector, useDispatch } from 'react-redux'
 import {
   LayoutDashboard, Lightbulb, Users, UserCheck,
-  FolderKanban, MessageSquare, TrendingUp, Award, Shield, User
+  FolderKanban, MessageSquare, TrendingUp, Shield, User
 } from 'lucide-react'
 import PortalLayout from '../../components/PortalLayout'
 import StudentDashboard from './StudentDashboard'
@@ -18,7 +18,6 @@ import ProjectWorkspace from './ProjectWorkspace'
 import TeamChat from './TeamChat'
 import ProgressPortal from './ProgressPortal'
 import StudentProgressPage from './StudentProgressPage'
-import CertificatePage from './CertificatePage'
 import { RootState } from '../../store'
 import { setTeam, clearTeam, TeamMember } from '../../store/teamSlice'
 import api from '../../lib/api'
@@ -27,8 +26,6 @@ export default function StudentPortal() {
   const dispatch = useDispatch()
   const team = useSelector((s: RootState) => s.team)
   const { user } = useSelector((s: RootState) => s.auth)
-
-  const [isProjectCompleted, setIsProjectCompleted] = useState(false)
 
   // Verify and sync team membership directly from backend database
   useEffect(() => {
@@ -40,19 +37,6 @@ export default function StudentPortal() {
             const isLead = myTeam.members?.some(
               (m: any) => m.user?.id === user.userId && (m.roleInTeam === 'Team Lead' || m.roleInTeam === 'LEADER')
             ) || (myTeam.project?.postedBy?.id === user.userId)
-
-            // Check if certificate is issued or project is completed
-            if (myTeam.status === 'COMPLETED') {
-              setIsProjectCompleted(true)
-            } else {
-              api.get(`/certificates/team/${myTeam.id}`)
-                .then(cRes => {
-                  if (cRes.data && cRes.data.certificateNumber) {
-                    setIsProjectCompleted(true)
-                  }
-                })
-                .catch(() => {})
-            }
 
             let domainList: string[] = []
             if (myTeam.project?.domain) {
@@ -79,16 +63,24 @@ export default function StudentPortal() {
             // Map server team members
             const mappedMembers: TeamMember[] = (myTeam.members || [])
               .filter((m: any) => m.inviteStatus === 'ACCEPTED' || !m.inviteStatus)
-              .map((m: any) => ({
-                id: m.user?.id?.toString() || m.id?.toString(),
-                name: m.user?.name || 'Member',
-                role: (m.roleInTeam === 'Team Lead' || m.roleInTeam === 'LEADER') ? 'LEADER' : 'MEMBER',
-                department: m.user?.department || 'Engineering',
-                rollNumber: m.user?.studentProfile?.rollNumber || `22CS${m.user?.id || 1}`,
-                techRole: m.roleInTeam || 'Developer',
-                skills: m.user?.userSkills?.map((s: any) => s.skill?.skillName).filter(Boolean) || [],
-                avatarInitial: (m.user?.name?.[0] || 'U').toUpperCase()
-              }))
+              .map((m: any) => {
+                const memberName = m.name || m.user?.name || 'Student'
+                return {
+                  id: (m.userId || m.user?.id || m.id)?.toString(),
+                  name: memberName,
+                  role: (m.roleInTeam === 'Team Lead' || m.roleInTeam === 'LEADER') ? 'LEADER' : 'MEMBER',
+                  department: m.department || m.user?.department || 'Computer Science and Engineering',
+                  rollNumber: m.rollNumber || m.user?.studentProfile?.rollNumber || `22CS${m.userId || m.user?.id || 1}`,
+                  techRole: m.techRole || m.roleInTeam || 'Developer',
+                  bio: m.bio || m.user?.studentProfile?.bio || '',
+                  githubLink: m.githubLink || m.user?.studentProfile?.githubLink || '',
+                  linkedinLink: m.linkedinLink || m.user?.studentProfile?.linkedinLink || '',
+                  skills: Array.isArray(m.skills) && m.skills.length > 0
+                    ? m.skills
+                    : (m.user?.userSkills?.map((s: any) => s.skill?.skillName).filter(Boolean) || []),
+                  avatarInitial: (memberName[0] || 'S').toUpperCase()
+                }
+              })
 
             const hasLeader = mappedMembers.some(m => m.role === 'LEADER')
             if (myTeam.status === 'DISSOLVED' || !hasLeader) {
@@ -155,16 +147,6 @@ export default function StudentPortal() {
       icon: <TrendingUp size={18} />
     },
 
-    // ── Phase 3: WRAP-UP ──
-    {
-      section: 'WRAP-UP',
-      label: 'Certificate',
-      href: '/student/certificate',
-      icon: <Award size={18} />,
-      locked: !isProjectCompleted,
-      lockTooltip: 'Unlocks after all project milestones are completed & evaluated',
-      badge: !isProjectCompleted ? 'locked' : 'ready'
-    }
   ]
 
   return (
@@ -193,7 +175,6 @@ export default function StudentPortal() {
         <Route path="chat"           element={<Navigate to="/student/workspace?tab=chat" replace />} />
         <Route path="progress"       element={<ProgressPortal />} />
         <Route path="progress/student/:studentId?" element={<StudentProgressPage />} />
-        <Route path="certificate"    element={<CertificatePage />} />
       </Routes>
     </PortalLayout>
   )

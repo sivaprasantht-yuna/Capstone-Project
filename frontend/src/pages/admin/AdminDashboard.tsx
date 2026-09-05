@@ -4,7 +4,8 @@ import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, Legend,
 } from 'recharts'
-import { Users, FolderKanban, AlertTriangle, Award, TrendingUp, UserCheck } from 'lucide-react'
+import { Users, FolderKanban, AlertTriangle, Award, TrendingUp, UserCheck, Download, FileSpreadsheet } from 'lucide-react'
+import toast from 'react-hot-toast'
 import api from '../../lib/api'
 
 const PIE_COLORS = ['#6366f1', '#10b981', '#f59e0b', '#ef4444', '#ec4899', '#06b6d4', '#8b5cf6', '#14b8a6']
@@ -25,6 +26,28 @@ interface OverviewStats {
 export default function AdminDashboard() {
   const [stats, setStats] = useState<OverviewStats | null>(null)
   const [loading, setLoading] = useState(true)
+  const [exporting, setExporting] = useState(false)
+
+  const handleExportGradeSheet = async () => {
+    setExporting(true)
+    try {
+      const res = await api.get('/admin/grades/export', { responseType: 'blob' })
+      const blob = new Blob([res.data], { type: 'text/csv;charset=utf-8;' })
+      const url = window.URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.setAttribute('download', `capstone_cohort_grades_${new Date().toISOString().slice(0, 10)}.csv`)
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      window.URL.revokeObjectURL(url)
+      toast.success('Cohort grade sheet exported successfully!')
+    } catch (err: any) {
+      toast.error('Failed to export grade sheet.')
+    } finally {
+      setExporting(false)
+    }
+  }
 
   useEffect(() => {
     api.get('/admin/analytics/overview')
@@ -58,9 +81,19 @@ export default function AdminDashboard() {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <div>
-        <h1 className="text-2xl font-bold text-slate-800">Admin Overview</h1>
-        <p className="text-slate-500 text-sm mt-1">Semester-wide capstone project analytics</p>
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-800">Admin Overview</h1>
+          <p className="text-slate-500 text-sm mt-0.5">Semester-wide capstone project analytics & records</p>
+        </div>
+        <button
+          onClick={handleExportGradeSheet}
+          disabled={exporting}
+          className="btn-primary flex items-center gap-2 text-xs py-2 px-3.5 shadow-xs font-semibold"
+        >
+          <Download size={15} />
+          {exporting ? 'Generating CSV...' : 'Export Grade Sheet (CSV)'}
+        </button>
       </div>
 
       {/* KPI Grid */}

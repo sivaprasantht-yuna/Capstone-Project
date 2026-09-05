@@ -78,17 +78,25 @@ def update_user_profile(
         # Clear existing
         db.query(models.UserSkill).filter(models.UserSkill.user_id == current_user.id).delete()
         for item in req.skills:
-            sname = item.get("skillName") or item.get("name")
+            if isinstance(item, str):
+                sname = item.strip()
+                category = "General"
+                level = 3
+            elif isinstance(item, dict):
+                sname = (item.get("skillName") or item.get("name") or "").strip()
+                category = item.get("category", "General")
+                level = int(item.get("proficiencyLevel", 3))
+            else:
+                continue
+
             if sname:
-                sname = sname.strip()
                 skill_obj = db.query(models.Skill).filter(models.Skill.skill_name.ilike(sname)).first()
                 if not skill_obj:
-                    skill_obj = models.Skill(skill_name=sname, category=item.get("category", "General"))
+                    skill_obj = models.Skill(skill_name=sname, category=category)
                     db.add(skill_obj)
                     db.commit()
                     db.refresh(skill_obj)
                 
-                level = int(item.get("proficiencyLevel", 3))
                 us = models.UserSkill(user_id=current_user.id, skill_id=skill_obj.id, proficiency_level=level)
                 db.add(us)
 

@@ -7,7 +7,8 @@ import {
   Crown, MailOpen, UserPlus, X, Search, Send,
   CheckCircle, XCircle, Users, Shield, RefreshCw,
   BookOpen, Hash, Briefcase, Star, ChevronRight,
-  Linkedin, Github, ExternalLink, Contact, Mail, AlertTriangle, Code2
+  Linkedin, Github, ExternalLink, Contact, Mail, AlertTriangle, Code2,
+  LogOut, UserMinus, ShieldAlert
 } from 'lucide-react'
 import { RootState } from '../../store'
 import { TeamMember, setTeam, clearTeam } from '../../store/teamSlice'
@@ -191,11 +192,16 @@ function MemberProfilePopup({
   const rollNo = profileData?.rollNumber || member?.rollNumber || `21${deptCode}104`
   const email = profileData?.email || (name ? `${name.toLowerCase().replace(/\s+/g, '.')}@bit.edu.in` : 'student@bit.edu.in')
   const bio = profileData?.bio || member?.bio || 'Passionate engineering student dedicated to innovation, technology, and collaborative team projects.'
-  const skills = (profileData?.skills && profileData.skills.length > 0)
+  const rawSkills = (profileData?.skills && profileData.skills.length > 0)
     ? profileData.skills
-    : ((member?.skills && member.skills.length > 0) ? member.skills : ['C / C++', 'Python', 'Web Development'])
-  const github = profileData?.githubLink?.trim() || member?.githubLink?.trim()
-  const linkedin = profileData?.linkedinLink?.trim() || member?.linkedinLink?.trim()
+    : ((member?.skills && member.skills.length > 0) ? member.skills : ['Python', 'FastAPI', 'React', 'PostgreSQL'])
+  const skills: string[] = rawSkills
+    .map((s: any) => (typeof s === 'string' ? s : s?.skillName || s?.name || 'Skill'))
+    .filter(Boolean)
+  const rawGithub = profileData?.githubLink?.trim() || member?.githubLink?.trim()
+  const rawLinkedin = profileData?.linkedinLink?.trim() || member?.linkedinLink?.trim()
+  const github = (rawGithub && rawGithub.length > 5) ? rawGithub : null
+  const linkedin = (rawLinkedin && rawLinkedin.length > 5) ? rawLinkedin : null
 
   return (
     <Popup
@@ -315,48 +321,38 @@ function MemberProfilePopup({
             </div>
           </div>
 
-          {/* ── LinkedIn & GitHub Links ── */}
-          <div className="flex flex-col sm:flex-row gap-3 pt-1">
-            {linkedin ? (
-              <a
-                href={linkedin.startsWith('http') ? linkedin : `https://${linkedin}`}
-                target="_blank"
-                rel="noreferrer"
-                className="flex-1 flex items-center justify-between px-4 py-2.5 rounded-xl bg-blue-50 border border-blue-200 text-blue-700 hover:bg-blue-100 transition-all text-xs font-semibold shadow-2xs"
-              >
-                <span className="flex items-center gap-2">
-                  <Linkedin size={15} className="text-blue-600" /> LinkedIn Profile
-                </span>
-                <ExternalLink size={13} />
-              </a>
-            ) : (
-              <div className="flex-1 flex items-center justify-between px-4 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-400 text-xs font-medium select-none">
-                <span className="flex items-center gap-2">
-                  <Linkedin size={15} className="text-slate-400" /> LinkedIn Not Added
-                </span>
-              </div>
-            )}
+          {/* ── LinkedIn & GitHub Links (Only shown when explicitly provided by user) ── */}
+          {(linkedin || github) && (
+            <div className="flex flex-col sm:flex-row gap-3 pt-1">
+              {linkedin && (
+                <a
+                  href={linkedin.startsWith('http') ? linkedin : `https://${linkedin}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex-1 flex items-center justify-between px-4 py-2.5 rounded-xl bg-blue-50 border border-blue-200 text-blue-700 hover:bg-blue-100 transition-all text-xs font-semibold shadow-2xs"
+                >
+                  <span className="flex items-center gap-2">
+                    <Linkedin size={15} className="text-blue-600" /> LinkedIn Profile
+                  </span>
+                  <ExternalLink size={13} />
+                </a>
+              )}
 
-            {github ? (
-              <a
-                href={github.startsWith('http') ? github : `https://${github}`}
-                target="_blank"
-                rel="noreferrer"
-                className="flex-1 flex items-center justify-between px-4 py-2.5 rounded-xl bg-slate-100 border border-slate-300 text-slate-800 hover:bg-slate-200 transition-all text-xs font-semibold shadow-2xs"
-              >
-                <span className="flex items-center gap-2">
-                  <Github size={15} className="text-slate-900" /> GitHub Profile
-                </span>
-                <ExternalLink size={13} />
-              </a>
-            ) : (
-              <div className="flex-1 flex items-center justify-between px-4 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-400 text-xs font-medium select-none">
-                <span className="flex items-center gap-2">
-                  <Github size={15} className="text-slate-400" /> GitHub Not Added
-                </span>
-              </div>
-            )}
-          </div>
+              {github && (
+                <a
+                  href={github.startsWith('http') ? github : `https://${github}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex-1 flex items-center justify-between px-4 py-2.5 rounded-xl bg-slate-100 border border-slate-300 text-slate-800 hover:bg-slate-200 transition-all text-xs font-semibold shadow-2xs"
+                >
+                  <span className="flex items-center gap-2">
+                    <Github size={15} className="text-slate-900" /> GitHub Profile
+                  </span>
+                  <ExternalLink size={13} />
+                </a>
+              )}
+            </div>
+          )}
 
           {/* ── Governance Actions (Remove) ── */}
           {currentUserIsLeader && !isLeader && onRemoveClick && (
@@ -665,12 +661,15 @@ function StudentProfileModal({
                 <Code2 size={12} /> Skills
               </p>
               <div className="flex flex-wrap gap-1.5">
-                {profile.skills.map(sk => (
-                  <span key={sk} className="px-2.5 py-1 rounded-lg bg-primary-50 border border-primary-100 text-primary-800 text-xs font-medium flex items-center gap-1.5">
-                    <span className="w-1.5 h-1.5 rounded-full bg-primary-500" />
-                    {sk}
-                  </span>
-                ))}
+                {profile.skills.map((sk: any, idx: number) => {
+                  const skillText = typeof sk === 'string' ? sk : sk?.skillName || sk?.name || 'Skill'
+                  return (
+                    <span key={idx} className="px-2.5 py-1 rounded-lg bg-primary-50 border border-primary-100 text-primary-800 text-xs font-medium flex items-center gap-1.5">
+                      <span className="w-1.5 h-1.5 rounded-full bg-primary-500" />
+                      {skillText}
+                    </span>
+                  )
+                })}
               </div>
             </div>
           )}
@@ -959,6 +958,182 @@ function AddMembersPopup({
   )
 }
 
+// ─── Dismantle Team Popup (Admin-Gated) ─────────────────────────────────────
+function DismantleTeamPopup({
+  open,
+  onClose,
+  teamId,
+  onSuccess
+}: {
+  open: boolean
+  onClose: () => void
+  teamId: string
+  onSuccess: () => void
+}) {
+  const [reason, setReason] = useState('')
+  const [submitting, setSubmitting] = useState(false)
+
+  const handleSubmit = async () => {
+    if (!reason.trim() || reason.trim().length < 5) {
+      toast.error('Please provide a detailed reason for dismantling the team (min 5 characters).')
+      return
+    }
+    setSubmitting(true)
+    try {
+      await api.post(`/teams/${teamId}/request-dismantle`, { reason: reason.trim() })
+      toast.success('Team dismantle request submitted for Institutional Admin approval!')
+      setReason('')
+      onClose()
+      onSuccess()
+    } catch (err: any) {
+      toast.error(err.response?.data?.detail || err.response?.data?.message || 'Failed to submit dismantle request')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  return (
+    <Popup
+      open={open}
+      onClose={onClose}
+      title="Request Team Dismantlement"
+      subtitle="Requires Institutional Admin review & approval"
+      icon={<AlertTriangle size={18} className="text-white" />}
+    >
+      <div className="space-y-4">
+        <div className="p-4 rounded-2xl bg-rose-50 border border-rose-200 text-xs text-rose-800 space-y-1.5">
+          <div className="font-bold flex items-center gap-1.5 text-rose-900">
+            <AlertTriangle size={14} /> Governance Approval Required
+          </div>
+          <p>
+            Dismantling this group requires administrative sign-off. Once approved by the Institutional Admin, the team will be dissolved and all members will be released.
+          </p>
+        </div>
+
+        <div>
+          <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+            Reason for Dismantling Group <span className="text-rose-500">*</span>
+          </label>
+          <textarea
+            value={reason}
+            onChange={e => setReason(e.target.value)}
+            placeholder="Please detail why the team should be dismantled (e.g., project change, schedule misalignment)..."
+            rows={4}
+            className="w-full text-xs p-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-rose-500 focus:outline-none"
+          />
+        </div>
+
+        <div className="flex gap-2 pt-2">
+          <button
+            type="button"
+            onClick={onClose}
+            className="btn-secondary flex-1 text-xs"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            disabled={submitting || !reason.trim()}
+            onClick={handleSubmit}
+            className="flex-1 py-2.5 px-4 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold transition-all shadow-2xs flex items-center justify-center gap-1.5 disabled:opacity-50"
+          >
+            {submitting ? <RefreshCw size={13} className="animate-spin" /> : <Send size={13} />}
+            Send Dismantle Request
+          </button>
+        </div>
+      </div>
+    </Popup>
+  )
+}
+
+// ─── Leave Team Popup (Admin-Gated) ─────────────────────────────────────────
+function LeaveTeamPopup({
+  open,
+  onClose,
+  teamId,
+  onSuccess
+}: {
+  open: boolean
+  onClose: () => void
+  teamId: string
+  onSuccess: () => void
+}) {
+  const [reason, setReason] = useState('')
+  const [submitting, setSubmitting] = useState(false)
+
+  const handleSubmit = async () => {
+    if (!reason.trim() || reason.trim().length < 5) {
+      toast.error('Please provide a reason for leaving the team (min 5 characters).')
+      return
+    }
+    setSubmitting(true)
+    try {
+      await api.post(`/teams/${teamId}/request-leave`, { reason: reason.trim() })
+      toast.success('Leave request submitted for Institutional Admin approval!')
+      setReason('')
+      onClose()
+      onSuccess()
+    } catch (err: any) {
+      toast.error(err.response?.data?.detail || err.response?.data?.message || 'Failed to submit leave request')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  return (
+    <Popup
+      open={open}
+      onClose={onClose}
+      title="Request to Leave Team"
+      subtitle="Requires Institutional Admin review & approval"
+      icon={<LogOut size={18} className="text-white" />}
+    >
+      <div className="space-y-4">
+        <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200 text-xs text-amber-800 space-y-1.5">
+          <div className="font-bold flex items-center gap-1.5 text-amber-900">
+            <UserMinus size={14} /> Member Departure Process
+          </div>
+          <p>
+            Leaving the team requires administrative sign-off. Once approved by the Institutional Admin, you will be removed from this team and free to join another.
+          </p>
+        </div>
+
+        <div>
+          <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+            Reason for Leaving Team <span className="text-rose-500">*</span>
+          </label>
+          <textarea
+            value={reason}
+            onChange={e => setReason(e.target.value)}
+            placeholder="Please detail why you wish to leave this team..."
+            rows={4}
+            className="w-full text-xs p-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-amber-500 focus:outline-none"
+          />
+        </div>
+
+        <div className="flex gap-2 pt-2">
+          <button
+            type="button"
+            onClick={onClose}
+            className="btn-secondary flex-1 text-xs"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            disabled={submitting || !reason.trim()}
+            onClick={handleSubmit}
+            className="flex-1 py-2.5 px-4 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-bold transition-all shadow-2xs flex items-center justify-center gap-1.5 disabled:opacity-50"
+          >
+            {submitting ? <RefreshCw size={13} className="animate-spin" /> : <Send size={13} />}
+            Send Leave Request
+          </button>
+        </div>
+      </div>
+    </Popup>
+  )
+}
+
 // ─── Leader Card ─────────────────────────────────────────────────────────────
 function LeaderCard({ member, onClick }: { member: TeamMember; onClick: () => void }) {
   return (
@@ -1064,115 +1239,6 @@ function MemberCard({ member, onClick }: { member: TeamMember; onClick: () => vo
   )
 }
 
-// ─── Dismantle Team Popup ─────────────────────────────────────────────────────
-function DismantleTeamPopup({
-  open, onClose, teamId, hasMentor, onSuccess
-}: {
-  open: boolean; onClose: () => void; teamId: string; hasMentor: boolean; onSuccess: () => void
-}) {
-  const [reason, setReason] = useState('')
-  const [loading, setLoading] = useState(false)
-
-  const handleSubmit = async () => {
-    if (!reason.trim()) return toast.error('A reason is required.')
-    setLoading(true)
-    try {
-      if (hasMentor) {
-        await api.post(`/teams/${teamId}/dismantle-request`, { reason })
-        toast.success('Dismantle request sent to mentor.')
-      } else {
-        await api.post(`/teams/${teamId}/dismantle`, { reason })
-        toast.success('Team dismantled.')
-      }
-      onSuccess()
-      onClose()
-    } catch (err: any) {
-      toast.error(err.response?.data?.message || 'Failed to process dismantle action.')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  return (
-    <Popup open={open} onClose={onClose} title={hasMentor ? "Request Team Dismantle" : "Dismantle Team"} icon={<AlertTriangle size={17} className="text-white" />}>
-      <div className="space-y-4">
-        <p className="text-sm text-slate-600">
-          {hasMentor
-            ? "Since your team has an assigned mentor, dismantling requires mentor approval. Please provide a detailed reason."
-            : "This action cannot be undone. All members will be removed and the team will be permanently dissolved."}
-        </p>
-        <textarea
-          value={reason} onChange={e => setReason(e.target.value)}
-          placeholder="Reason for dismantling the team..."
-          className="input-dark w-full h-24 resize-none"
-        />
-        <div className="flex gap-3 justify-end pt-2">
-          <button onClick={onClose} className="btn-secondary">Cancel</button>
-          <button onClick={handleSubmit} disabled={loading} className="btn-danger flex items-center gap-2">
-            {loading ? <RefreshCw size={14} className="animate-spin" /> : <AlertTriangle size={14} />}
-            {hasMentor ? 'Submit Request' : 'Dismantle Team'}
-          </button>
-        </div>
-      </div>
-    </Popup>
-  )
-}
-
-// ─── Remove Member Popup ──────────────────────────────────────────────────────
-function RemoveMemberPopup({
-  open, onClose, teamId, member, hasMentor, onSuccess
-}: {
-  open: boolean; onClose: () => void; teamId: string; member: TeamMember | null; hasMentor: boolean; onSuccess: () => void
-}) {
-  const [reason, setReason] = useState('')
-  const [loading, setLoading] = useState(false)
-
-  const handleSubmit = async () => {
-    if (!member) return
-    if (!reason.trim()) return toast.error('A reason is required.')
-    setLoading(true)
-    try {
-      if (hasMentor) {
-        await api.post(`/teams/${teamId}/members/${member.id}/removal-request`, { reason })
-        toast.success('Removal request sent to mentor.')
-      } else {
-        await api.delete(`/teams/${teamId}/members/${member.id}`, { data: { reason } })
-        toast.success('Member removed.')
-      }
-      onSuccess()
-      onClose()
-    } catch (err: any) {
-      toast.error(err.response?.data?.message || 'Failed to process removal action.')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  return (
-    <Popup open={open} onClose={onClose} title={hasMentor ? "Request Member Removal" : "Remove Member"} icon={<XCircle size={17} className="text-white" />}>
-      <div className="space-y-4">
-        <p className="text-sm text-slate-600">
-          {hasMentor
-            ? `Request removal of ${member?.name}. This requires mentor approval.`
-            : `Remove ${member?.name} from the team. This action is immediate.`}
-        </p>
-        <textarea
-          value={reason} onChange={e => setReason(e.target.value)}
-          placeholder="Reason for removal..."
-          className="input-dark w-full h-24 resize-none"
-        />
-        <div className="flex gap-3 justify-end pt-2">
-          <button onClick={onClose} className="btn-secondary">Cancel</button>
-          <button onClick={handleSubmit} disabled={loading} className="btn-danger flex items-center gap-2">
-            {loading ? <RefreshCw size={14} className="animate-spin" /> : <XCircle size={14} />}
-            {hasMentor ? 'Submit Request' : 'Remove Member'}
-          </button>
-        </div>
-      </div>
-    </Popup>
-  )
-}
-
 // ─── Team Portal Main ────────────────────────────────────────────────────────
 export default function TeamPortal() {
   const navigate  = useNavigate()
@@ -1184,29 +1250,34 @@ export default function TeamPortal() {
   const [selectedMember, setSelectedMember] = useState<TeamMember | null>(null)
   const [pendingCount,   setPendingCount]   = useState(0)
   const [dismantleTeamOpen, setDismantleTeamOpen] = useState(false)
+  const [leaveTeamOpen, setLeaveTeamOpen] = useState(false)
   const [removeMemberTarget, setRemoveMemberTarget] = useState<TeamMember | null>(null)
   // ── Helper: fetch latest team state from backend and sync to Redux ──
   const refreshTeam = useCallback(async () => {
-    if (!team.teamId) return
     try {
       const res = await api.get('/teams/my')
       if (Array.isArray(res.data) && res.data.length > 0) {
         const myTeam = res.data[0]
         const mappedMembers: TeamMember[] = (myTeam.members || [])
           .filter((m: any) => m.inviteStatus === 'ACCEPTED' || !m.inviteStatus)
-          .map((m: any) => ({
-            id: m.user?.id?.toString() || m.id?.toString(),
-            name: m.user?.name || 'Member',
-            role: (m.roleInTeam === 'Team Lead' || m.roleInTeam === 'LEADER') ? 'LEADER' : 'MEMBER',
-            department: m.user?.department || 'Engineering',
-            rollNumber: m.user?.studentProfile?.rollNumber || '',
-            techRole: m.roleInTeam || 'Developer',
-            bio: m.user?.studentProfile?.bio || '',
-            githubLink: m.user?.studentProfile?.githubLink || '',
-            linkedinLink: m.user?.studentProfile?.linkedinLink || '',
-            skills: m.user?.userSkills?.map((s: any) => s.skill?.skillName).filter(Boolean) || [],
-            avatarInitial: (m.user?.name?.[0] || 'U').toUpperCase()
-          }))
+          .map((m: any) => {
+            const memberName = m.name || m.user?.name || 'Student'
+            return {
+              id: (m.userId || m.user?.id || m.id)?.toString(),
+              name: memberName,
+              role: (m.roleInTeam === 'Team Lead' || m.roleInTeam === 'LEADER') ? 'LEADER' : 'MEMBER',
+              department: m.department || m.user?.department || 'Computer Science and Engineering',
+              rollNumber: m.rollNumber || m.user?.studentProfile?.rollNumber || `22CS${m.userId || m.user?.id || 1}`,
+              techRole: m.techRole || m.roleInTeam || 'Developer',
+              bio: m.bio || m.user?.studentProfile?.bio || '',
+              githubLink: m.githubLink || m.user?.studentProfile?.githubLink || '',
+              linkedinLink: m.linkedinLink || m.user?.studentProfile?.linkedinLink || '',
+              skills: Array.isArray(m.skills) && m.skills.length > 0
+                ? m.skills
+                : (m.user?.userSkills?.map((s: any) => s.skill?.skillName).filter(Boolean) || []),
+              avatarInitial: (memberName[0] || 'S').toUpperCase()
+            }
+          })
 
         const hasLeader = mappedMembers.some(m => m.role === 'LEADER')
         if (myTeam.status === 'DISSOLVED' || !hasLeader) {
@@ -1215,7 +1286,12 @@ export default function TeamPortal() {
           return
         }
 
-        dispatch(setTeam({ members: mappedMembers, currentMemberCount: mappedMembers.length }))
+        dispatch(setTeam({
+          teamId: myTeam.id.toString(),
+          teamName: myTeam.teamName,
+          members: mappedMembers,
+          currentMemberCount: mappedMembers.length
+        }))
       } else {
         dispatch(clearTeam())
         navigate('/student/team', { replace: true })
@@ -1226,16 +1302,15 @@ export default function TeamPortal() {
         navigate('/student/team', { replace: true })
       }
     }
-  }, [team.teamId, dispatch, navigate])
+  }, [dispatch, navigate])
 
-  // ── Real-time polling: refresh team + pending count every 5 seconds ──
+  // ── Initial load & Real-time polling: refresh team + pending count ──
   useEffect(() => {
-    if (!team.teamId) return
     refreshTeam()
 
     const interval = setInterval(() => {
       refreshTeam()
-      if (team.isLeader) {
+      if (team.isLeader && team.teamId) {
         api.get(`/teams/${team.teamId}/join-requests`)
           .then(r => { if (Array.isArray(r.data)) setPendingCount(r.data.length) })
           .catch(() => {})
@@ -1354,17 +1429,31 @@ export default function TeamPortal() {
                 </div>
               </div>
 
-              {/* Dismantle Team */}
-              {team.isLeader && (
+              {/* Dismantle Team (Leader only) */}
+              {team.isLeader ? (
                 <div className="relative group">
                   <button
+                    id="team-dismantle-btn"
                     onClick={() => setDismantleTeamOpen(true)}
                     className="w-11 h-11 rounded-2xl flex items-center justify-center border border-red-200 text-red-600 hover:text-red-700 hover:border-red-300 hover:bg-red-50 bg-white shadow-2xs transition-all ml-1"
                   >
                     <AlertTriangle size={20} />
                   </button>
                   <div className="absolute right-0 top-full mt-2 px-2.5 py-1 bg-slate-800 text-white text-xs rounded-lg shadow-md whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-10">
-                    Dismantle Team
+                    Request Team Dismantle
+                  </div>
+                </div>
+              ) : (
+                <div className="relative group">
+                  <button
+                    id="team-leave-btn"
+                    onClick={() => setLeaveTeamOpen(true)}
+                    className="w-11 h-11 rounded-2xl flex items-center justify-center border border-amber-200 text-amber-600 hover:text-amber-700 hover:border-amber-300 hover:bg-amber-50 bg-white shadow-2xs transition-all ml-1"
+                  >
+                    <LogOut size={20} />
+                  </button>
+                  <div className="absolute right-0 top-full mt-2 px-2.5 py-1 bg-slate-800 text-white text-xs rounded-lg shadow-md whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-10">
+                    Request to Leave Team
                   </div>
                 </div>
               )}
@@ -1372,6 +1461,14 @@ export default function TeamPortal() {
           </div>
         </div>
       </div>
+
+      {/* ── Status Banner for Pending Dismantle Request ───────────────── */}
+      {team.status === 'DISMANTLE_REQUESTED' && (
+        <div className="p-4 bg-amber-50 border border-amber-200 rounded-2xl text-amber-800 text-xs font-semibold flex items-center gap-3 animate-pulse">
+          <ShieldAlert size={18} className="text-amber-600 flex-shrink-0" />
+          <span>A team dissolution request has been submitted and is currently <strong>Pending Institutional Admin Approval</strong>.</span>
+        </div>
+      )}
 
       {/* ── Members Section ───────────────────────────────────────────── */}
       <div>
@@ -1468,19 +1565,13 @@ export default function TeamPortal() {
         open={dismantleTeamOpen}
         onClose={() => setDismantleTeamOpen(false)}
         teamId={team.teamId}
-        hasMentor={team.hasMentor}
-        onSuccess={() => {
-          refreshTeam()
-          if (!team.hasMentor) navigate('/student/team', { replace: true })
-        }}
+        onSuccess={refreshTeam}
       />
 
-      <RemoveMemberPopup
-        open={!!removeMemberTarget}
-        onClose={() => setRemoveMemberTarget(null)}
+      <LeaveTeamPopup
+        open={leaveTeamOpen}
+        onClose={() => setLeaveTeamOpen(false)}
         teamId={team.teamId}
-        member={removeMemberTarget}
-        hasMentor={team.hasMentor}
         onSuccess={refreshTeam}
       />
     </div>

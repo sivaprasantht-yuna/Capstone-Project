@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "playwright": {
+      "command": "cmd.exe",
+      "args": ["/c", "npx", "-y", "@executeautomation/playwright-mcp-server"]
+    },
+    "chrome-devtools": {
+      "command": "cmd.exe",
+      "args": ["/c", "npx", "-y", "chrome-devtools-mcp@latest", "--chrome-arg=--no-sandbox", "--chrome-arg=--disable-setuid-sandbox"]
+    }
+  }
+}

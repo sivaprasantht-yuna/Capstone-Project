@@ -115,8 +115,13 @@ class TeamMemberDto(BaseModel):
     inviteStatus: str # PENDING, ACCEPTED, REJECTED
     joinedAt: Optional[datetime] = None
     rollNumber: Optional[str] = None
+    bio: Optional[str] = None
     githubLink: Optional[str] = None
     linkedinLink: Optional[str] = None
+    skills: List[str] = []
+
+    class Config:
+        from_attributes = True
 
 class TeamCreateRequest(BaseModel):
     teamName: str
@@ -142,6 +147,31 @@ class JoinRequestCreate(BaseModel):
 
 class JoinRequestRespond(BaseModel):
     accept: bool
+
+class TeamGovernanceRequestCreate(BaseModel):
+    reason: str
+
+class TeamGovernanceReviewRequest(BaseModel):
+    action: str # "APPROVE" or "REJECT"
+    adminNotes: Optional[str] = None
+
+class TeamGovernanceRequestDto(BaseModel):
+    id: int
+    teamId: int
+    teamName: str
+    userId: int
+    userName: str
+    userRoleInTeam: str
+    userDepartment: str
+    requestType: str # "DISMANTLE_TEAM" or "LEAVE_TEAM"
+    reason: str
+    status: str # "PENDING", "APPROVED", "REJECTED"
+    adminNotes: Optional[str] = None
+    createdAt: Optional[datetime] = None
+    reviewedAt: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True
 
 
 # ─── Message & Chat Schemas ───────────────────────────────────────────────────
@@ -178,14 +208,24 @@ class MilestoneDto(BaseModel):
     pointsReward: Optional[int] = None
     sequenceOrder: Optional[int] = None
     submittedAt: Optional[datetime] = None
+    deliverableUrl: Optional[str] = None
+    githubUrl: Optional[str] = None
+    submissionRemarks: Optional[str] = None
     createdAt: Optional[datetime] = None
 
 class MilestoneSubmitRequest(BaseModel):
-    pass  # No extra fields — just triggers status change
+    remarks: Optional[str] = None
+    githubUrl: Optional[str] = None
 
 class MilestoneGradeRequest(BaseModel):
+    marks: Optional[float] = None
     pointsReward: Optional[int] = None
+    feedback: Optional[str] = None
+    feedbackData: Optional[dict] = None
     status: str = "APPROVED"
+
+class MilestoneEvaluateRequest(MilestoneGradeRequest):
+    pass
 
 
 # ─── Notification Schemas ─────────────────────────────────────────────────────

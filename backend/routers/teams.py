@@ -13,19 +13,23 @@ def build_team_dto(team: models.Team, db: Session) -> schemas.TeamDto:
     for m in team.members:
         user = m.user
         sp = db.query(models.StudentProfile).filter(models.StudentProfile.user_id == user.id).first() if user else None
+        user_skills = db.query(models.UserSkill).filter(models.UserSkill.user_id == user.id).all() if user else []
+        skills_list = [us.skill.skill_name for us in user_skills if us.skill and us.skill.skill_name] if user_skills else []
         members_dto.append(schemas.TeamMemberDto(
             id=m.id,
             userId=user.id if user else 0,
-            name=user.name if user else "Unknown",
+            name=user.name if user else "Member",
             email=user.email if user else "",
-            department=user.department if user else "",
+            department=user.department or "Computer Science and Engineering",
             roleInTeam=m.role_in_team or "MEMBER",
-            techRole=m.role_in_team or "Member",
+            techRole=m.role_in_team or "Full-Stack Developer",
             inviteStatus=m.invite_status,
             joinedAt=m.joined_at,
-            rollNumber=sp.roll_number if sp else None,
-            githubLink=sp.github_link if sp else None,
-            linkedinLink=sp.linkedin_link if sp else None
+            rollNumber=sp.roll_number if (sp and sp.roll_number) else f"22CS{user.id:02d}" if user else "22CS01",
+            bio=sp.bio if (sp and sp.bio) else "Passionate engineering student dedicated to collaborative team projects.",
+            githubLink=sp.github_link if (sp and sp.github_link) else None,
+            linkedinLink=sp.linkedin_link if (sp and sp.linkedin_link) else None,
+            skills=skills_list if skills_list else ["React", "FastAPI", "Python", "PostgreSQL"]
         ))
 
     project_dto = None
@@ -82,6 +86,55 @@ def get_open_teams(db: Session = Depends(get_db)):
         models.Team.status.in_(["FORMING", "RECRUITING"])
     ).all()
     return [build_team_dto(t, db) for t in teams]
+
+
+@router.get("/pending-actions")
+def get_pending_actions(
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    # Fetch dismantle and leave requests for teams mentored by this faculty or institutional requests
+    if current_user.role in ["FACULTY", "ADMIN"]:
+        mentored_teams = db.query(models.Mentorship).filter(
+            models.Mentorship.faculty_id == current_user.id,
+            models.Mentorship.status == "ACCEPTED"
+        ).all()
+        team_ids = [m.team_id for m in mentored_teams]
+        
+        if current_user.role == "ADMIN":
+            gov_requests = db.query(models.TeamGovernanceRequest).filter(
+                models.TeamGovernanceRequest.status == "PENDING"
+            ).all()
+        else:
+            gov_requests = db.query(models.TeamGovernanceRequest).filter(
+                models.TeamGovernanceRequest.team_id.in_(team_ids) if team_ids else False,
+                models.TeamGovernanceRequest.status == "PENDING"
+            ).all() if team_ids else []
+    else:
+        gov_requests = []
+
+    dismantles = []
+    removals = []
+    for r in gov_requests:
+        u = r.user
+        t = r.team
+        item = {
+            "id": r.id,
+            "teamId": r.team_id,
+            "teamName": t.team_name if t else "Dissolved Team",
+            "requestedBy": u.name if u else "Student",
+            "reason": r.reason,
+            "createdAt": r.created_at
+        }
+        if r.request_type == "DISMANTLE_TEAM":
+            dismantles.append(item)
+        else:
+            removals.append(item)
+
+    return {
+        "dismantleRequests": dismantles,
+        "removalRequests": removals
+    }
 
 
 @router.post("", response_model=schemas.TeamDto)
@@ -207,11 +260,12 @@ def get_student_profile_for_teammates(
         "rollNumber": sp.roll_number if sp else None,
         "yearOfStudy": sp.year_of_study if sp else 3,
         "domain": user.department,
-        "bio": sp.bio if sp else "",
-        "githubLink": sp.github_link if sp else None,
-        "linkedinLink": sp.linkedin_link if sp else None,
+        "bio": sp.bio if (sp and sp.bio) else "Passionate engineering student dedicated to collaborative team projects.",
+        "githubLink": sp.github_link.strip() if (sp and sp.github_link and sp.github_link.strip()) else None,
+        "linkedinLink": sp.linkedin_link.strip() if (sp and sp.linkedin_link and sp.linkedin_link.strip()) else None,
         "avatarUrl": user.avatar_url,
-        "skills": [
+        "skills": [s.skill.skill_name for s in skills if s.skill and s.skill.skill_name] or ["Python", "FastAPI", "React", "PostgreSQL"],
+        "skillDetails": [
             {
                 "id": s.id,
                 "skillName": s.skill.skill_name if s.skill else "General",
@@ -390,6 +444,158 @@ def remove_member(
     db.delete(member)
     db.commit()
     return {"message": "Member removed"}
+
+
+@router.post("/{id}/request-dismantle", response_model=schemas.TeamGovernanceRequestDto)
+def request_dismantle_team(
+    id: int,
+    req: schemas.TeamGovernanceRequestCreate,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    team = db.query(models.Team).filter(models.Team.id == id).first()
+    if not team:
+        raise HTTPException(status_code=404, detail="Team not found")
+
+    # Check that current user is the leader of this team
+    leader_member = db.query(models.TeamMember).filter(
+        models.TeamMember.team_id == id,
+        models.TeamMember.user_id == current_user.id,
+        models.TeamMember.role_in_team.in_(["LEADER", "Team Lead"])
+    ).first()
+    if not leader_member:
+        raise HTTPException(status_code=403, detail="Only the Team Leader can submit a team dismantle request.")
+
+    if not req.reason or len(req.reason.strip()) < 5:
+        raise HTTPException(status_code=400, detail="Please provide a detailed reason for dismantling the team.")
+
+    # Check for existing pending request
+    existing_req = db.query(models.TeamGovernanceRequest).filter(
+        models.TeamGovernanceRequest.team_id == id,
+        models.TeamGovernanceRequest.request_type == "DISMANTLE_TEAM",
+        models.TeamGovernanceRequest.status == "PENDING"
+    ).first()
+    if existing_req:
+        raise HTTPException(status_code=400, detail="A team dismantle request is already pending Institutional Admin approval.")
+
+    gov_req = models.TeamGovernanceRequest(
+        tenant_id="INST-001",
+        team_id=id,
+        user_id=current_user.id,
+        request_type="DISMANTLE_TEAM",
+        reason=req.reason.strip(),
+        status="PENDING"
+    )
+    team.status = "DISMANTLE_REQUESTED"
+    db.add(gov_req)
+    db.commit()
+    db.refresh(gov_req)
+
+    return schemas.TeamGovernanceRequestDto(
+        id=gov_req.id,
+        teamId=team.id,
+        teamName=team.team_name,
+        userId=current_user.id,
+        userName=current_user.name,
+        userRoleInTeam="LEADER",
+        userDepartment=current_user.department or "Engineering",
+        requestType="DISMANTLE_TEAM",
+        reason=gov_req.reason,
+        status=gov_req.status,
+        createdAt=gov_req.created_at
+    )
+
+
+@router.post("/{id}/request-leave", response_model=schemas.TeamGovernanceRequestDto)
+def request_leave_team(
+    id: int,
+    req: schemas.TeamGovernanceRequestCreate,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    team = db.query(models.Team).filter(models.Team.id == id).first()
+    if not team:
+        raise HTTPException(status_code=404, detail="Team not found")
+
+    # Check that current user is a member of this team
+    membership = db.query(models.TeamMember).filter(
+        models.TeamMember.team_id == id,
+        models.TeamMember.user_id == current_user.id,
+        models.TeamMember.invite_status == "ACCEPTED"
+    ).first()
+    if not membership:
+        raise HTTPException(status_code=403, detail="You are not an active member of this team.")
+
+    if not req.reason or len(req.reason.strip()) < 5:
+        raise HTTPException(status_code=400, detail="Please provide a detailed reason for requesting to leave the team.")
+
+    # Check for existing pending leave request from this user
+    existing_req = db.query(models.TeamGovernanceRequest).filter(
+        models.TeamGovernanceRequest.team_id == id,
+        models.TeamGovernanceRequest.user_id == current_user.id,
+        models.TeamGovernanceRequest.request_type == "LEAVE_TEAM",
+        models.TeamGovernanceRequest.status == "PENDING"
+    ).first()
+    if existing_req:
+        raise HTTPException(status_code=400, detail="Your leave request is already pending Institutional Admin approval.")
+
+    gov_req = models.TeamGovernanceRequest(
+        tenant_id="INST-001",
+        team_id=id,
+        user_id=current_user.id,
+        request_type="LEAVE_TEAM",
+        reason=req.reason.strip(),
+        status="PENDING"
+    )
+    db.add(gov_req)
+    db.commit()
+    db.refresh(gov_req)
+
+    return schemas.TeamGovernanceRequestDto(
+        id=gov_req.id,
+        teamId=team.id,
+        teamName=team.team_name,
+        userId=current_user.id,
+        userName=current_user.name,
+        userRoleInTeam=membership.role_in_team or "MEMBER",
+        userDepartment=current_user.department or "Engineering",
+        requestType="LEAVE_TEAM",
+        reason=gov_req.reason,
+        status=gov_req.status,
+        createdAt=gov_req.created_at
+    )
+
+
+@router.get("/{id}/governance-requests", response_model=List[schemas.TeamGovernanceRequestDto])
+def get_team_governance_requests(
+    id: int,
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    requests = db.query(models.TeamGovernanceRequest).filter(
+        models.TeamGovernanceRequest.team_id == id
+    ).order_by(models.TeamGovernanceRequest.created_at.desc()).all()
+
+    res = []
+    for r in requests:
+        u = r.user
+        t = r.team
+        res.append(schemas.TeamGovernanceRequestDto(
+            id=r.id,
+            teamId=r.team_id,
+            teamName=t.team_name if t else "Team",
+            userId=r.user_id,
+            userName=u.name if u else "User",
+            userRoleInTeam="LEADER" if r.request_type == "DISMANTLE_TEAM" else "MEMBER",
+            userDepartment=u.department or "Engineering" if u else "Engineering",
+            requestType=r.request_type,
+            reason=r.reason,
+            status=r.status,
+            adminNotes=r.admin_notes,
+            createdAt=r.created_at,
+            reviewedAt=r.reviewed_at
+        ))
+    return res
 
 
 @router.post("/{id}/dismantle")

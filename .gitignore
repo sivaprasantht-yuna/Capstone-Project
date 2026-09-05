@@ -34,4 +34,7 @@ venv/
 .frontend-run.ps1
 .matching-run.ps1
 
+# Uploads & Media (Preserve .gitkeep structure)
+backend/uploads/*
+!backend/uploads/**/.gitkeep
 

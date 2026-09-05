@@ -142,6 +142,24 @@ class TeamMember(Base):
     user = relationship("User", back_populates="team_memberships")
 
 
+class TeamGovernanceRequest(Base):
+    __tablename__ = "team_governance_requests"
+
+    id = Column(BigInteger, primary_key=True, index=True, autoincrement=True)
+    tenant_id = Column(String(50), default="INST-001", nullable=False)
+    team_id = Column(BigInteger, ForeignKey("teams.id", ondelete="CASCADE"), nullable=False)
+    user_id = Column(BigInteger, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    request_type = Column(String(50), nullable=False) # 'DISMANTLE_TEAM' or 'LEAVE_TEAM'
+    reason = Column(Text, nullable=False)
+    status = Column(String(50), default="PENDING", nullable=False) # 'PENDING', 'APPROVED', 'REJECTED'
+    admin_notes = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    reviewed_at = Column(DateTime, nullable=True)
+
+    team = relationship("Team")
+    user = relationship("User")
+
+
 class Milestone(Base):
     __tablename__ = "milestones"
 
@@ -254,21 +272,6 @@ class ProjectEvidence(Base):
     task = relationship("StudentTask", back_populates="evidence")
     uploaded_by = relationship("User", foreign_keys=[uploaded_by_id])
     verified_by = relationship("User", foreign_keys=[verified_by_id])
-
-
-class Certificate(Base):
-    __tablename__ = "certificates"
-
-    id = Column(BigInteger, primary_key=True, index=True, autoincrement=True)
-    tenant_id = Column(String(64), default="INST-001", nullable=False)
-    team_id = Column(BigInteger, ForeignKey("teams.id", ondelete="CASCADE"), nullable=False)
-    certificate_number = Column(String(255), unique=True, nullable=True)
-    pdf_url = Column(String(255), nullable=True)
-    cloudinary_public_id = Column(String(255), nullable=True)
-    issued_at = Column(DateTime, default=datetime.utcnow)
-
-    team = relationship("Team")
-
 
 class Event(Base):
     __tablename__ = "events"

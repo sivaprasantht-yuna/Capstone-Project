@@ -71,7 +71,9 @@ export default function StudentProfilePage() {
     avatarUrl: user?.avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=400',
     linkedinLink: user?.linkedinLink || '',
     githubLink: user?.githubLink || '',
-    skills: user?.skills && user.skills.length > 0 ? user.skills : []
+    skills: user?.skills && user.skills.length > 0
+      ? (user.skills as any[]).map((s: any) => typeof s === 'string' ? s : (s?.skillName || s?.name || String(s)))
+      : []
   })
 
   // Form temporary states
@@ -91,6 +93,11 @@ export default function StudentProfilePage() {
         if (!isMounted) return
         const data = res.data
         if (data) {
+          const rawSkills = Array.isArray(data.skills) ? data.skills : []
+          const normalizedSkills: string[] = rawSkills.map((s: any) =>
+            typeof s === 'string' ? s : (s?.skillName || s?.name || String(s))
+          )
+
           const updated: ProfileData = {
             name: data.name || user?.name || '',
             email: data.email || user?.email || '',
@@ -104,7 +111,7 @@ export default function StudentProfilePage() {
             avatarUrl: data.avatarUrl || user?.avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=400',
             linkedinLink: data.linkedinLink || '',
             githubLink: data.githubLink || '',
-            skills: Array.isArray(data.skills) ? data.skills : []
+            skills: normalizedSkills
           }
           setProfile(updated)
           setForm(updated)
@@ -405,16 +412,20 @@ export default function StudentProfilePage() {
                 </h3>
               </div>
               <div className="flex flex-wrap gap-2.5 pt-1">
-                {profile.skills.map((skill, idx) => (
-                  <span
-                    key={idx}
-                    className="px-3.5 py-2 rounded-xl bg-primary-50 border border-primary-100 text-primary-800 text-xs font-semibold flex items-center gap-2 shadow-2xs"
-                    style={{ fontFamily: 'Outfit, sans-serif' }}
-                  >
-                    <span className="w-1.5 h-1.5 rounded-full bg-primary-500" />
-                    {skill}
-                  </span>
-                ))}
+                {profile.skills.map((skill: any, idx) => {
+                  const skillText = typeof skill === 'string' ? skill : (skill?.skillName || skill?.name || '')
+                  if (!skillText) return null
+                  return (
+                    <span
+                      key={idx}
+                      className="px-3.5 py-2 rounded-xl bg-primary-50 border border-primary-100 text-primary-800 text-xs font-semibold flex items-center gap-2 shadow-2xs"
+                      style={{ fontFamily: 'Outfit, sans-serif' }}
+                    >
+                      <span className="w-1.5 h-1.5 rounded-full bg-primary-500" />
+                      {skillText}
+                    </span>
+                  )
+                })}
               </div>
             </div>
 
@@ -856,21 +867,25 @@ export default function StudentProfilePage() {
                     </div>
 
                     <div className="flex flex-wrap gap-2 pt-2 max-h-36 overflow-y-auto p-2 bg-slate-50 rounded-xl border border-slate-200">
-                      {form.skills.map((skill, idx) => (
-                        <span
-                          key={idx}
-                          className="px-3 py-1 rounded-lg bg-primary-50 border border-primary-200 text-primary-800 text-xs font-medium flex items-center gap-2"
-                        >
-                          {skill}
-                          <button
-                            type="button"
-                            onClick={() => handleRemoveSkill(skill)}
-                            className="text-primary-600 hover:text-primary-900 transition-colors"
+                      {form.skills.map((skill: any, idx) => {
+                        const skillText = typeof skill === 'string' ? skill : (skill?.skillName || skill?.name || '')
+                        if (!skillText) return null
+                        return (
+                          <span
+                            key={idx}
+                            className="px-3 py-1 rounded-lg bg-primary-50 border border-primary-200 text-primary-800 text-xs font-medium flex items-center gap-2"
                           >
-                            <X size={13} />
-                          </button>
-                        </span>
-                      ))}
+                            {skillText}
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveSkill(skillText)}
+                              className="text-primary-600 hover:text-primary-900 transition-colors"
+                            >
+                              <X size={13} />
+                            </button>
+                          </span>
+                        )
+                      })}
                     </div>
                   </div>
 

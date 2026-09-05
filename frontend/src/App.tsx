@@ -40,8 +40,8 @@ export default function App() {
   return (
     <Routes>
       {/* Public */}
-      <Route path="/login"    element={<LoginPage />} />
-      <Route path="/register" element={<RegisterPage />} />
+      <Route path="/login"         element={<LoginPage />} />
+      <Route path="/register"      element={<RegisterPage />} />
 
       {/* Role redirect */}
       <Route path="/" element={isAuthenticated ? getPortalForRole() : <Navigate to="/login" replace />} />

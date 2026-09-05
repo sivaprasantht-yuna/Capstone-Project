@@ -11,9 +11,11 @@ Unifies:
   • Graph Analytics & Document Sanitizer
 """
 
+import os
 import asyncio
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from config import settings
 from websocket_manager import ws_manager
@@ -22,7 +24,7 @@ from websocket_manager import ws_manager
 from routers import (
     auth, users, projects, teams, messages, milestones,
     mentorships, notifications, matching, admin,
-    tasks, progress, certificates,
+    tasks, progress,
     teammate_match, mentor_match, idea_similarity,
     graph_analysis, document_sanitizer
 )
@@ -58,7 +60,6 @@ app.include_router(projects.router)
 app.include_router(teams.router)
 app.include_router(tasks.router)
 app.include_router(progress.router)
-app.include_router(certificates.router)
 app.include_router(messages.router)
 app.include_router(milestones.router)
 app.include_router(mentorships.router)
@@ -73,6 +74,24 @@ app.include_router(idea_similarity.router, prefix="/match", tags=["AI Idea Simil
 app.include_router(graph_analysis.router)
 app.include_router(document_sanitizer.router)
 
+# Zero-Storage Idea Distillation & Vector Deduplication Engine
+try:
+    from app.main import (
+        scan_document as vector_scan_document,
+        get_indexed_ideas as vector_get_indexed_ideas,
+        health_check as vector_health_check
+    )
+    app.add_api_route("/api/scan-document", vector_scan_document, methods=["POST"], tags=["Vector Deduplication Engine"])
+    app.add_api_route("/api/ideas", vector_get_indexed_ideas, methods=["GET"], tags=["Vector Deduplication Engine"])
+    app.add_api_route("/api/health/vector-engine", vector_health_check, methods=["GET"], tags=["Vector Deduplication Engine"])
+except Exception as e:
+    print(f"[Warning] Could not mount vector engine routes: {e}")
+
+
+
+# ─── Static Uploads Mount ───────────────────────────────────────────────────
+os.makedirs("uploads", exist_ok=True)
+app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
 # ─── WebSocket Chat Endpoint ──────────────────────────────────────────────────
 @app.websocket("/ws/chat/{team_id}")
@@ -81,6 +100,9 @@ async def websocket_chat_endpoint(websocket: WebSocket, team_id: int):
     try:
         while True:
             data = await websocket.receive_json()
+            if data.get("type") == "PING":
+                await websocket.send_json({"type": "PONG"})
+                continue
             # Handle incoming WebSocket message or read receipt
             msg_type = data.get("type", "CHAT_MESSAGE")
             await ws_manager.broadcast_to_team(team_id, data)
@@ -96,6 +118,9 @@ async def websocket_generic_endpoint(websocket: WebSocket):
     try:
         while True:
             data = await websocket.receive_text()
+            if "PING" in data:
+                await websocket.send_text('{"type": "PONG"}')
+                continue
             await websocket.send_text(f"echo: {data}")
     except WebSocketDisconnect:
         pass
