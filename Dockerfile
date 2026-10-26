@@ -1,29 +1,19 @@
 # ==========================================
-# STAGE 1: Build the Java Spring Boot JAR
+# Python FastAPI Backend (Optimized for Low RAM)
 # ==========================================
-FROM maven:3.9.6-eclipse-temurin-21 AS build
-WORKDIR /backend-build
+FROM python:3.11-slim
 
-# Copy only the backend folder
-COPY backend/pom.xml .
-# Pre-download all Maven dependencies as a separate cached layer
-RUN mvn dependency:go-offline -q
-COPY backend/src ./src
-
-# Compile the JAR
-RUN mvn clean package -DskipTests
-
-# ==========================================
-# STAGE 2: Final Production Container
-# ==========================================
-FROM eclipse-temurin:21-jre-jammy
 WORKDIR /app
 
-# Copy the compiled JAR from Stage 1
-COPY --from=build /backend-build/target/*.jar ./app.jar
+ENV PYTHONUNBUFFERED=1
+ENV MALLOC_ARENA_MAX=2
 
-# Expose the mandatory Hugging Face port
-EXPOSE 7860
+COPY backend/requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
 
-# Boot the Java application
-ENTRYPOINT ["java", "-Dserver.port=7860", "-jar", "app.jar"]
+COPY backend/ .
+
+EXPOSE 8000
+
+# Single worker fits comfortably within 512MB RAM free tier limits without OOM
+CMD sh -c "uvicorn main:app --host 0.0.0.0 --port \${PORT:-8000} --workers 1"

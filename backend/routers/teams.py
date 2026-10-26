@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 from database import get_db
 import models, schemas
 from security import get_current_user
+from tenant import tenant_filter, get_user_tenant_id
 
 router = APIRouter(prefix="/api/v1/teams", tags=["Teams"])
 
@@ -81,10 +82,15 @@ def get_my_teams(
 
 
 @router.get("/open", response_model=List[schemas.TeamDto])
-def get_open_teams(db: Session = Depends(get_db)):
-    teams = db.query(models.Team).filter(
-        models.Team.status.in_(["FORMING", "RECRUITING"])
-    ).all()
+def get_open_teams(
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    query = tenant_filter(
+        db.query(models.Team).filter(models.Team.status.in_(["FORMING", "RECRUITING"])),
+        models.Team, get_user_tenant_id(current_user)
+    )
+    teams = query.all()
     return [build_team_dto(t, db) for t in teams]
 
 
@@ -153,8 +159,9 @@ def create_team(
         raise HTTPException(status_code=400, detail="You already belong to an active team")
 
     # Create associated Project
+    user_tenant = get_user_tenant_id(current_user)
     project = models.Project(
-        tenant_id="INST-001",
+        tenant_id=user_tenant,
         title=req.projectTitle,
         description=req.projectDescription,
         domain=req.domain or "Artificial Intelligence",
@@ -169,7 +176,7 @@ def create_team(
 
     # Create Team
     team = models.Team(
-        tenant_id="INST-001",
+        tenant_id=user_tenant,
         team_name=req.teamName,
         project_id=project.id,
         status="FORMING",
@@ -221,6 +228,7 @@ def get_available_students(
     candidates = db.query(models.User).filter(
         models.User.role == "STUDENT",
         models.User.is_active == True,
+        models.User.tenant_id == get_user_tenant_id(current_user),
         ~models.User.id.in_(active_ids)
     ).limit(30).all()
 
@@ -479,7 +487,7 @@ def request_dismantle_team(
         raise HTTPException(status_code=400, detail="A team dismantle request is already pending Institutional Admin approval.")
 
     gov_req = models.TeamGovernanceRequest(
-        tenant_id="INST-001",
+        tenant_id=get_user_tenant_id(current_user),
         team_id=id,
         user_id=current_user.id,
         request_type="DISMANTLE_TEAM",
@@ -540,7 +548,7 @@ def request_leave_team(
         raise HTTPException(status_code=400, detail="Your leave request is already pending Institutional Admin approval.")
 
     gov_req = models.TeamGovernanceRequest(
-        tenant_id="INST-001",
+        tenant_id=get_user_tenant_id(current_user),
         team_id=id,
         user_id=current_user.id,
         request_type="LEAVE_TEAM",

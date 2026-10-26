@@ -7,6 +7,21 @@ from sqlalchemy import (
 from sqlalchemy.orm import relationship
 from database import Base
 
+class Tenant(Base):
+    """
+    Institutional tenant for multi-college SaaS isolation (Model B).
+    Each college is a tenant with allowed email domains and an opt-in showcase flag.
+    """
+    __tablename__ = "tenants"
+
+    id = Column(String(64), primary_key=True)                        # e.g. "INST-BIT"
+    name = Column(String(200), nullable=False)                       # "Bannari Amman Institute of Technology"
+    email_domains = Column(Text, nullable=False)                     # "bitsathy.ac.in" (comma-separated)
+    allow_public_showcase = Column(Boolean, default=False)           # Opt-in inter-college idea showcase
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
 class User(Base):
     __tablename__ = "users"
 

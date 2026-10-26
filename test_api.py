@@ -3,8 +3,8 @@ import urllib.request
 import urllib.error
 import json
 
-# Override via BACKEND_URL env var (e.g. export BACKEND_URL=https://your-hf-space.hf.space/api/v1)
-BASE_URL = os.environ.get("BACKEND_URL", "http://localhost:8081/api/v1")
+# Override via BACKEND_URL env var (e.g. export BACKEND_URL=https://your-backend.onrender.com/api/v1)
+BASE_URL = os.environ.get("BACKEND_URL", "http://localhost:8000/api/v1")
 url = f"{BASE_URL}/auth/register"
 
 data = json.dumps({

@@ -12,7 +12,18 @@ Unifies:
 """
 
 import os
+from dotenv import load_dotenv
+
+# Load .env (checks root first, then local backend/; does not override existing system env vars)
+_root_env = os.path.join(os.path.dirname(__file__), '..', '.env')
+_local_env = os.path.join(os.path.dirname(__file__), '.env')
+load_dotenv(_root_env, override=False)
+load_dotenv(_local_env, override=False)
+
+# Patch DNS resolution for Supabase hostnames (fixes broken local DNS at 127.0.0.1)
+import dns_fix  # noqa: F401 — must be imported before any DB connections
 import asyncio
+
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.staticfiles import StaticFiles
@@ -48,6 +59,7 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.ALLOWED_ORIGINS,
+    allow_origin_regex=r"https://.*\.netlify\.app",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -90,12 +102,37 @@ except Exception as e:
 
 
 # ─── Static Uploads Mount ───────────────────────────────────────────────────
-os.makedirs("uploads", exist_ok=True)
-app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
+_uploads_dir = os.path.join(os.path.dirname(__file__), "uploads")
+os.makedirs(_uploads_dir, exist_ok=True)
+app.mount("/uploads", StaticFiles(directory=_uploads_dir), name="uploads")
 
 # ─── WebSocket Chat Endpoint ──────────────────────────────────────────────────
 @app.websocket("/ws/chat/{team_id}")
-async def websocket_chat_endpoint(websocket: WebSocket, team_id: int):
+async def websocket_chat_endpoint(websocket: WebSocket, team_id: int, token: str = None):
+    # Authenticate via ?token=<JWT> query param (browsers can't send Bearer headers on WS)
+    from security import decode_token
+    from database import SessionLocal
+    if not token:
+        await websocket.close(code=1008, reason="Missing auth token")
+        return
+    try:
+        payload = decode_token(token)
+        email = payload.get("sub") or payload.get("email")
+        if not email:
+            raise ValueError("Invalid token payload")
+        db = SessionLocal()
+        try:
+            import models as _models
+            user = db.query(_models.User).filter(_models.User.email == email).first()
+            if not user or not user.is_active:
+                await websocket.close(code=1008, reason="Unauthorized")
+                return
+        finally:
+            db.close()
+    except Exception:
+        await websocket.close(code=1008, reason="Unauthorized")
+        return
+
     await ws_manager.connect(websocket, team_id)
     try:
         while True:
@@ -104,12 +141,12 @@ async def websocket_chat_endpoint(websocket: WebSocket, team_id: int):
                 await websocket.send_json({"type": "PONG"})
                 continue
             # Handle incoming WebSocket message or read receipt
-            msg_type = data.get("type", "CHAT_MESSAGE")
             await ws_manager.broadcast_to_team(team_id, data)
     except WebSocketDisconnect:
         ws_manager.disconnect(websocket, team_id)
     except Exception:
         ws_manager.disconnect(websocket, team_id)
+
 
 
 @app.websocket("/ws")

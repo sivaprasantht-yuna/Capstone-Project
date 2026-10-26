@@ -9,8 +9,38 @@ from database import SessionLocal, engine
 import models, security
 
 def seed_demo_accounts():
+    models.Base.metadata.create_all(bind=engine)
     db: Session = SessionLocal()
     try:
+        # 0. Institutional Tenants (Model B)
+        tenants_data = [
+            ("INST-BIT", "Bannari Amman Institute of Technology", "bitsathy.ac.in", True),
+            ("INST-PSG", "PSG College of Technology", "psgtech.ac.in", False),
+            ("INST-KEC", "Kongu Engineering College", "kongu.ac.in,kongu.edu", False),
+            ("INST-KCT", "Kumaraguru College of Technology", "kct.ac.in", False),
+            ("INST-CIT", "Coimbatore Institute of Technology", "cit.edu.in", False),
+            ("INST-TCE", "Thiagarajar College of Engineering", "tce.edu", False),
+            ("INST-AMRITA", "Amrita Vishwa Vidyapeetham (Coimbatore)", "cb.amrita.edu,amrita.edu", False),
+            ("INST-SREC", "Sri Ramakrishna Engineering College", "srec.ac.in", False),
+            ("INST-001", "Default Institution (Demo)", "gmail.com,outlook.com,yahoo.com,capstonehub.app,capstone.edu", True),
+        ]
+        for tid, tname, tdomains, tshowcase in tenants_data:
+            existing_t = db.query(models.Tenant).filter(models.Tenant.id == tid).first()
+            if not existing_t:
+                db.add(models.Tenant(
+                    id=tid,
+                    name=tname,
+                    email_domains=tdomains,
+                    allow_public_showcase=tshowcase,
+                    is_active=True
+                ))
+            else:
+                existing_t.name = tname
+                existing_t.email_domains = tdomains
+                existing_t.allow_public_showcase = tshowcase
+                existing_t.is_active = True
+        db.commit()
+
         # 1. Standard Demo Accounts
         accounts = [
             {

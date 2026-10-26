@@ -1,0 +1,21 @@
+# ─── Netlify Build & Deploy Configuration ─────────────────────────────────────
+# Single file configuration for deploying the Capstone Project frontend on Netlify.
+
+[build]
+  # Base directory where frontend code and package.json reside
+  base = "frontend"
+  # Build command to install dependencies and produce the production bundle
+  command = "npm run build"
+  # Directory where the compiled assets are emitted (relative to base)
+  publish = "dist"
+
+# ─── Single Page App (SPA) Routing ───────────────────────────────────────────
+# Route all paths to index.html so React Router handles client-side URLs.
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+# ─── Build Environment ────────────────────────────────────────────────────────
+[build.environment]
+  NODE_VERSION = "20"

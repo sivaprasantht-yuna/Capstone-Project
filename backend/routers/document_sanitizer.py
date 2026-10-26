@@ -5,7 +5,7 @@ import os
 
 router = APIRouter(prefix="/api/v1/sanitizer", tags=["Document Sanitizer"])
 
-NVIDIA_API_KEY = os.getenv("NVIDIA_API_KEY", "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")
+NVIDIA_API_KEY = os.getenv("NVIDIA_API_KEY", "")  # Must be set in .env
 
 # NVIDIA NIM uses an OpenAI-compatible endpoint
 client = OpenAI(

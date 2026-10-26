@@ -38,6 +38,7 @@ export default function LoginPage() {
       dispatch(setUser({
         userId: data.userId, name: data.name, email: data.email,
         role: data.role, department: data.department,
+        tenantId: data.tenantId, institutionName: data.institutionName,
         accessToken: data.accessToken, refreshToken: data.refreshToken,
       }))
       toast.success(`Welcome back, ${data.name}!`)

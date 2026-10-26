@@ -114,7 +114,8 @@ export default function RegisterPage() {
       dispatch(clearTeam())
       dispatch(setUser({
         userId: data.userId, name: data.name, email: data.email, role: data.role,
-        department: data.department, accessToken: data.accessToken, refreshToken: data.refreshToken,
+        department: data.department, tenantId: data.tenantId, institutionName: data.institutionName,
+        accessToken: data.accessToken, refreshToken: data.refreshToken,
       }))
       toast.success(`Account created! Welcome, ${data.name}!`)
       const routes: Record<string, string> = {

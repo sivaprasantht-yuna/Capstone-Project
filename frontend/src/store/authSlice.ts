@@ -14,6 +14,8 @@ export interface AuthUser {
   linkedinLink?: string
   githubLink?: string
   skills?: string[]
+  tenantId?: string
+  institutionName?: string
   accessToken: string
   refreshToken: string
 }

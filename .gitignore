@@ -37,4 +37,7 @@ venv/
 # Uploads & Media (Preserve .gitkeep structure)
 backend/uploads/*
 !backend/uploads/**/.gitkeep
+
+# Netlify
+.netlify/
 

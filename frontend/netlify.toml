@@ -1,0 +1,14 @@
+# ─── Netlify Configuration (Frontend Directory Level) ─────────────────────────
+# Used when Netlify is configured with Base Directory = "frontend" or deploying from within frontend.
+
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+[build.environment]
+  NODE_VERSION = "20"

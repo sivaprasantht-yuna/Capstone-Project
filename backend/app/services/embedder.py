@@ -1,5 +1,6 @@
+import os
+import shutil
 from typing import List
-import numpy as np
 from fastembed import TextEmbedding
 from app.config import settings
 
@@ -7,9 +8,29 @@ class EmbeddingService:
     _instance = None
     
     def __init__(self):
+        self.model = None
+
+    def _ensure_model(self):
+        if self.model is not None:
+            return
         print(f"[Embedder] Initializing local FastEmbed model '{settings.EMBEDDING_MODEL_NAME}' on CPU...")
-        self.model = TextEmbedding(model_name=settings.EMBEDDING_MODEL_NAME)
-        print(f"[Embedder] FastEmbed model loaded successfully! Output dimension: {settings.EMBEDDING_DIMENSION}")
+        try:
+            self.model = TextEmbedding(model_name=settings.EMBEDDING_MODEL_NAME)
+            print(f"[Embedder] FastEmbed model loaded successfully! Output dimension: {settings.EMBEDDING_DIMENSION}")
+        except Exception as e:
+            print(f"[Embedder] Warning loading model: {e}. Attempting cache purge and retry...")
+            cache_dir = os.path.join(os.environ.get('TEMP', ''), 'fastembed_cache')
+            if os.path.exists(cache_dir):
+                try:
+                    shutil.rmtree(cache_dir, ignore_errors=True)
+                except Exception:
+                    pass
+            try:
+                self.model = TextEmbedding(model_name=settings.EMBEDDING_MODEL_NAME)
+                print(f"[Embedder] FastEmbed model loaded successfully after cache cleanup!")
+            except Exception as e2:
+                print(f"[Embedder] Could not load FastEmbed model: {e2}. Falling back to zero-vectors.")
+                self.model = None
 
     @classmethod
     def get_instance(cls) -> "EmbeddingService":
@@ -21,12 +42,19 @@ class EmbeddingService:
         """
         Generates 384-dimensional normalized float embedding vector using CPU FastEmbed.
         """
+        self._ensure_model()
         if not text or not text.strip():
             text = "empty concept"
         
-        # FastEmbed returns a generator of numpy arrays
-        embeddings = list(self.model.embed([text]))
-        vector = embeddings[0].tolist()
-        return vector
+        if self.model is None:
+            return [0.0] * getattr(settings, "EMBEDDING_DIMENSION", 384)
+
+        try:
+            embeddings = list(self.model.embed([text]))
+            return embeddings[0].tolist()
+        except Exception as e:
+            print(f"[Embedder] Embedding error: {e}")
+            return [0.0] * getattr(settings, "EMBEDDING_DIMENSION", 384)
 
 embedder_service = EmbeddingService.get_instance()
+

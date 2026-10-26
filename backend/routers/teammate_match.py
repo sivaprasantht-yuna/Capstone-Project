@@ -26,7 +26,7 @@ Response:
 ]
 """
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 from typing import Dict, List, Optional
 from services.cosine_engine import (
@@ -35,6 +35,8 @@ from services.cosine_engine import (
 from services.team_partition_ilp import (
     optimize_team_partition, TeamPartitionReport
 )
+import models
+from security import get_current_user
 
 router = APIRouter()
 
@@ -62,7 +64,10 @@ class TeamPartitionRequest(BaseModel):
 
 
 @router.post("/teammates", response_model=List[TeammateMatchResult])
-def match_teammates(req: TeammateMatchRequest) -> List[TeammateMatchResult]:
+def match_teammates(
+    req: TeammateMatchRequest,
+    current_user: models.User = Depends(get_current_user)
+) -> List[TeammateMatchResult]:
     """
     Returns top_n candidates ranked by complementary skill-gap score.
     Used for on-demand candidate discovery by student team leaders.
@@ -103,7 +108,10 @@ def match_teammates(req: TeammateMatchRequest) -> List[TeammateMatchResult]:
 
 
 @router.post("/teams/optimal-partition", response_model=TeamPartitionReport)
-def partition_cohort_teams(req: TeamPartitionRequest) -> TeamPartitionReport:
+def partition_cohort_teams(
+    req: TeamPartitionRequest,
+    current_user: models.User = Depends(get_current_user)
+) -> TeamPartitionReport:
     """
     Classroom Team Formation Optimization (ILP Formulation - arXiv:2506.02756).
     Globally partitions an entire cohort of students into balanced teams maximizing intra-team

@@ -44,6 +44,30 @@ def reset_and_seed_db():
     try:
         now = datetime.now(timezone.utc)
 
+        # ─── 0. INSTITUTIONAL TENANTS (Model B) ──────────────────────────────
+        tenants_data = [
+            ("INST-BIT", "Bannari Amman Institute of Technology", "bitsathy.ac.in", True),
+            ("INST-PSG", "PSG College of Technology", "psgtech.ac.in", False),
+            ("INST-KEC", "Kongu Engineering College", "kongu.ac.in,kongu.edu", False),
+            ("INST-KCT", "Kumaraguru College of Technology", "kct.ac.in", False),
+            ("INST-CIT", "Coimbatore Institute of Technology", "cit.edu.in", False),
+            ("INST-TCE", "Thiagarajar College of Engineering", "tce.edu", False),
+            ("INST-AMRITA", "Amrita Vishwa Vidyapeetham (Coimbatore)", "cb.amrita.edu,amrita.edu", False),
+            ("INST-SREC", "Sri Ramakrishna Engineering College", "srec.ac.in", False),
+            ("INST-001", "Default Institution (Demo)", "gmail.com,outlook.com,yahoo.com,capstonehub.app,capstone.edu", True),
+        ]
+        for tid, tname, tdomains, tshowcase in tenants_data:
+            t_obj = models.Tenant(
+                id=tid,
+                name=tname,
+                email_domains=tdomains,
+                allow_public_showcase=tshowcase,
+                is_active=True
+            )
+            db.add(t_obj)
+        db.commit()
+        print(f"  • Inserted {len(tenants_data)} institutional tenants (BIT, PSG, KEC, KCT, CIT, TCE, AMRITA, SREC, Demo).")
+
         # ─── 1. SKILLS CATALOG ────────────────────────────────────────────────
         skills_data = [
             ("Python", "Programming"), ("JavaScript", "Programming"), ("TypeScript", "Programming"),

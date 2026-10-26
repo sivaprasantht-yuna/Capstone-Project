@@ -47,13 +47,15 @@ interface Project {
   projectOverviewDoc?: string
   similarityScore?: number
   ideaSimilarityScore?: number
+  institutionName?: string
   createdAt?: string
 }
 
 export default function IdeaRepository() {
-  const [activeTab, setActiveTab] = useState<'reference' | 'my'>('reference')
+  const [activeTab, setActiveTab] = useState<'reference' | 'my' | 'showcase'>('reference')
   const [projects, setProjects] = useState<Project[]>([])
   const [myProjects, setMyProjects] = useState<Project[]>([])
+  const [showcaseProjects, setShowcaseProjects] = useState<Project[]>([])
   const [domains, setDomains] = useState<string[]>([])
   const [selectedDomain, setSelectedDomain] = useState('')
   const [search, setSearch] = useState('')
@@ -84,11 +86,13 @@ export default function IdeaRepository() {
     Promise.all([
       api.get('/projects'),
       api.get('/projects/domains'),
-      api.get('/projects/my').catch(() => ({ data: [] }))
-    ]).then(([pRes, dRes, myRes]) => {
+      api.get('/projects/my').catch(() => ({ data: [] })),
+      api.get('/projects/showcase').catch(() => ({ data: [] }))
+    ]).then(([pRes, dRes, myRes, sRes]) => {
       setProjects(pRes.data)
       setDomains(Array.isArray(dRes.data) ? [...dRes.data].sort((a: string, b: string) => a.localeCompare(b)) : [])
       setMyProjects(myRes.data)
+      setShowcaseProjects(Array.isArray(sRes.data) ? sRes.data : [])
     })
   }
 
@@ -96,8 +100,9 @@ export default function IdeaRepository() {
     fetchData()
   }, [])
 
-  // Filter projects for Reference & My Repository
-  const displayedProjects = (activeTab === 'my' ? myProjects : projects).filter(p =>
+  // Filter projects for Reference, Personal & Inter-College Repository
+  const currentList = activeTab === 'my' ? myProjects : activeTab === 'showcase' ? showcaseProjects : projects
+  const displayedProjects = currentList.filter(p =>
     (!selectedDomain || p.domain === selectedDomain) &&
     (!search || p.title.toLowerCase().includes(search.toLowerCase()) || p.description.toLowerCase().includes(search.toLowerCase()))
   )
@@ -254,6 +259,16 @@ export default function IdeaRepository() {
           >
             <FolderGit2 size={16} /> My Personal Repository ({myProjects.length})
           </button>
+          <button
+            onClick={() => setActiveTab('showcase')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all ${
+              activeTab === 'showcase'
+                ? 'bg-white text-primary-700 shadow-sm border border-slate-200'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/50'
+            }`}
+          >
+            <Sparkles size={16} className="text-amber-500" /> Inter-College Showcase ({showcaseProjects.length})
+          </button>
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
@@ -290,6 +305,8 @@ export default function IdeaRepository() {
           <p className="text-slate-500 text-xs mt-1">
             {activeTab === 'my' 
               ? "You haven't posted any ideas to your personal repository yet. Click 'Post & Verify Idea' to add one." 
+              : activeTab === 'showcase'
+              ? "No public ideas currently shared from opted-in institutions."
               : "Try clearing your filters or post a new verified concept."}
           </p>
         </div>
@@ -302,9 +319,16 @@ export default function IdeaRepository() {
             >
               <div className="space-y-3">
                 <div className="flex items-start justify-between gap-2">
-                  <span className="badge badge-primary text-[10px] font-semibold">
-                    {p.domain || 'General Domain'}
-                  </span>
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <span className="badge badge-primary text-[10px] font-semibold">
+                      {p.domain || 'General Domain'}
+                    </span>
+                    {p.institutionName && (
+                      <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200/80">
+                        🏛️ {p.institutionName}
+                      </span>
+                    )}
+                  </div>
                   <span className="text-[10px] font-mono text-slate-400">
                     #{p.id}
                   </span>
@@ -323,7 +347,7 @@ export default function IdeaRepository() {
                 <div className="flex items-center gap-1.5">
                   <ShieldCheck size={14} className="text-emerald-500" />
                   <span className="text-[11px] font-medium text-slate-600">
-                    {p.postedByName || 'Institutional Author'}
+                    {p.institutionName || p.postedByName || 'Institutional Author'}
                   </span>
                 </div>
 

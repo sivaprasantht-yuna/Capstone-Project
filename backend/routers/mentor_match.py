@@ -28,7 +28,7 @@ Response:
 ]
 """
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 from typing import Dict, List, Optional
 from services.cosine_engine import (
@@ -37,6 +37,8 @@ from services.cosine_engine import (
 from services.gale_shapley import (
     deferred_acceptance_many_to_one, GlobalMatchingReport
 )
+import models
+from security import get_current_user
 
 router = APIRouter()
 
@@ -74,7 +76,10 @@ class StableAllocationRequest(BaseModel):
 
 
 @router.post("/mentors", response_model=List[MentorMatchResult])
-def match_mentors(req: MentorMatchRequest) -> List[MentorMatchResult]:
+def match_mentors(
+    req: MentorMatchRequest,
+    current_user: models.User = Depends(get_current_user)
+) -> List[MentorMatchResult]:
     """
     Returns top_n faculty ranked by expertise-overlap score with workload penalty.
     Used for on-demand candidate discovery by student team leaders.
@@ -116,7 +121,10 @@ def match_mentors(req: MentorMatchRequest) -> List[MentorMatchResult]:
 
 
 @router.post("/mentors/stable-allocation", response_model=GlobalMatchingReport)
-def match_mentors_stable_allocation(req: StableAllocationRequest) -> GlobalMatchingReport:
+def match_mentors_stable_allocation(
+    req: StableAllocationRequest,
+    current_user: models.User = Depends(get_current_user)
+) -> GlobalMatchingReport:
     """
     Gale-Shapley (Hospitals/Residents) Stable Allocation Algorithm.
     Computes two-sided preferences from mutual skill-overlap matrices and runs

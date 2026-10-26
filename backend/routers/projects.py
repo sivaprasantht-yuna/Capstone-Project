@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 from database import get_db
 import models, schemas
 from security import get_current_user, require_role
+from tenant import tenant_filter, get_user_tenant_id
 
 # Import Zero-Storage Vector Deduplication Engine components
 from app.services.parser import extract_text_in_memory
@@ -20,9 +21,10 @@ def get_projects(
     search: Optional[str] = None,
     domain: Optional[str] = None,
     status: Optional[str] = None,
+    current_user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    query = db.query(models.Project)
+    query = tenant_filter(db.query(models.Project), models.Project, get_user_tenant_id(current_user))
     if status and status != "ALL":
         query = query.filter(models.Project.status == status.upper())
     else:
@@ -53,6 +55,41 @@ def get_projects(
             createdAt=p.created_at
         ))
     return res
+
+
+@router.get("/showcase")
+def get_inter_college_showcase(db: Session = Depends(get_db)):
+    """
+    Inter-College Public Idea Showcase (read-only, no auth required).
+    Returns approved project ideas from institutions that have opted in (allow_public_showcase=True).
+    Only exposes title, domain, description, and institution name — no student PII or grades.
+    """
+    showcase_tenants = db.query(models.Tenant).filter(
+        models.Tenant.allow_public_showcase == True,
+        models.Tenant.is_active == True
+    ).all()
+    tenant_ids = [t.id for t in showcase_tenants]
+    tenant_names = {t.id: t.name for t in showcase_tenants}
+
+    if not tenant_ids:
+        return []
+
+    projects = db.query(models.Project).filter(
+        models.Project.tenant_id.in_(tenant_ids),
+        models.Project.status == "APPROVED"
+    ).order_by(models.Project.created_at.desc()).limit(50).all()
+
+    return [
+        {
+            "id": p.id,
+            "title": p.title,
+            "domain": p.domain or "General",
+            "description": p.description[:300] if p.description else "",
+            "institutionName": tenant_names.get(p.tenant_id, "Unknown Institution"),
+            "createdAt": p.created_at
+        }
+        for p in projects
+    ]
 
 
 @router.get("/domains")
@@ -215,7 +252,7 @@ def create_project(
 
     # 3. Commit to Projects table (Personal + Reference Repo)
     project = models.Project(
-        tenant_id="INST-001",
+        tenant_id=get_user_tenant_id(current_user),
         title=req.title,
         description=req.description,
         domain=req.domain or concept.domain,

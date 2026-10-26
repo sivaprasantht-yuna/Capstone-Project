@@ -1,0 +1,38 @@
+# ─── Render Blueprint Specification (Optimized for 512MB RAM Limit) ───────────
+# https://render.com/docs/blueprint-spec
+
+services:
+  - type: web
+    name: capstone-backend
+    runtime: python
+    region: singapore # Closest region to Supabase (Mumbai ap-south-1) for minimal latency
+    plan: free
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    # Single worker is essential on Render Free (512MB RAM) — prevents OOM killed crashes
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT --workers 1
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.9
+      - key: PYTHONUNBUFFERED
+        value: "1"
+      - key: MALLOC_ARENA_MAX
+        value: "2" # Restricts glibc memory fragmentation to save ~60MB RAM
+      - key: DB_URL
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: CLOUDINARY_CLOUD_NAME
+        sync: false
+      - key: CLOUDINARY_API_KEY
+        sync: false
+      - key: CLOUDINARY_API_SECRET
+        sync: false
+      - key: REDIS_URL
+        sync: false
+      - key: NVIDIA_API_KEY
+        sync: false
+      - key: ALLOWED_ORIGINS
+        value: "*"

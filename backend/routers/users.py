@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from database import get_db
 import models, schemas
 from security import get_current_user
+from tenant import tenant_filter, get_user_tenant_id
 
 router = APIRouter(tags=["Users & Profile"])
 
@@ -141,8 +142,14 @@ def get_user_skills(
 
 
 @router.get("/api/v1/users/faculty")
-def get_faculty_members(db: Session = Depends(get_db)):
-    faculty = db.query(models.User).filter(models.User.role == "FACULTY", models.User.is_active == True).all()
+def get_faculty_members(
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    faculty = tenant_filter(
+        db.query(models.User).filter(models.User.role == "FACULTY", models.User.is_active == True),
+        models.User, get_user_tenant_id(current_user)
+    ).all()
     res = []
     for f in faculty:
         fp = db.query(models.FacultyProfile).filter(models.FacultyProfile.user_id == f.id).first()

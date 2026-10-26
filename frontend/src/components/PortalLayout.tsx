@@ -302,6 +302,11 @@ export default function PortalLayout({ navItems, children, portalTitle, portalCo
                   <div className="text-sm font-semibold text-slate-800 truncate hover:text-primary-600 transition-colors" style={{ fontFamily: 'Outfit, sans-serif' }}>
                     {user?.name}
                   </div>
+                  {user?.institutionName && (
+                    <div className="text-[11px] font-medium text-primary-600 truncate leading-tight" title={user.institutionName}>
+                      {user.institutionName}
+                    </div>
+                  )}
                   <div className="text-xs text-slate-500 truncate">
                     {user?.department || user?.role}
                   </div>
@@ -463,6 +468,9 @@ export default function PortalLayout({ navItems, children, portalTitle, portalCo
                     <div className="text-sm font-semibold text-slate-800 truncate" style={{ fontFamily: 'Outfit, sans-serif' }}>
                       {user?.name}
                     </div>
+                    {user?.institutionName && (
+                      <div className="text-[11px] text-primary-600 font-medium truncate">{user.institutionName}</div>
+                    )}
                     <div className="text-xs text-slate-500 truncate">{user?.role}</div>
                   </div>
                 </div>
@@ -498,6 +506,14 @@ export default function PortalLayout({ navItems, children, portalTitle, portalCo
                     style={{ fontFamily: 'Outfit, sans-serif' }}>
                 {user?.role}
               </span>
+              {user?.institutionName && (
+                <span className="hidden md:inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-700 border border-slate-200/80"
+                      title={`Institutional Tenant: ${user?.tenantId || 'Default'}`}
+                      style={{ fontFamily: 'Outfit, sans-serif' }}>
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                  {user.institutionName}
+                </span>
+              )}
             </div>
           </div>
 

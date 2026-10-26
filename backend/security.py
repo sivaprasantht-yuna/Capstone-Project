@@ -31,6 +31,9 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -
     else:
         expire = datetime.now(timezone.utc) + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     to_encode.update({"exp": expire, "type": "access"})
+    # Ensure tenant_id is carried in the JWT for multi-tenant isolation
+    if "tenant_id" not in to_encode:
+        to_encode["tenant_id"] = data.get("tenant_id", settings.DEFAULT_TENANT_ID)
     encoded_jwt = jwt.encode(to_encode, settings.JWT_SECRET, algorithm=settings.JWT_ALGORITHM)
     return encoded_jwt
 

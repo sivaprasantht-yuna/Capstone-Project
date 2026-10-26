@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 from database import get_db
 import models
 from security import get_current_user
+from tenant import get_user_tenant_id
 from pydantic import BaseModel
 
 router = APIRouter(prefix="/api/v1/teams", tags=["Tasks & Evidence"])
@@ -42,7 +43,7 @@ def create_task(
             due_dt = None
 
     task = models.StudentTask(
-        tenant_id="INST-001",
+        tenant_id=get_user_tenant_id(current_user),
         team_id=teamId,
         assigned_to_id=req.assignedToId,
         assigned_by_id=current_user.id,
@@ -176,7 +177,7 @@ def add_evidence(
         raise HTTPException(status_code=404, detail="Task not found")
 
     ev = models.ProjectEvidence(
-        tenant_id="INST-001",
+        tenant_id=get_user_tenant_id(current_user),
         team_id=teamId,
         task_id=taskId,
         uploaded_by_id=current_user.id,

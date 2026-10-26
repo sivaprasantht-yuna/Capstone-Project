@@ -43,6 +43,8 @@ class AuthResponse(BaseModel):
     email: str
     role: str
     department: Optional[str] = None
+    tenantId: Optional[str] = None
+    institutionName: Optional[str] = None
 
 
 # ─── User & Profile Schemas ───────────────────────────────────────────────────

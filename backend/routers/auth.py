@@ -6,6 +6,7 @@ from security import (
     get_password_hash, verify_password, create_access_token,
     create_refresh_token, decode_token, get_current_user
 )
+from tenant import resolve_tenant_from_email, get_tenant_name
 
 router = APIRouter(prefix="/api/v1/auth", tags=["Auth"])
 
@@ -15,9 +16,12 @@ def register(req: schemas.RegisterRequest, db: Session = Depends(get_db)):
     if existing:
         raise HTTPException(status_code=400, detail="An account with this email already exists")
 
+    # Resolve tenant from email domain (e.g. @bitsathy.ac.in → INST-BIT)
+    tenant_id = resolve_tenant_from_email(req.email, db)
+
     # Create User
     new_user = models.User(
-        tenant_id="INST-001",
+        tenant_id=tenant_id,
         name=req.name,
         email=req.email,
         password_hash=get_password_hash(req.password),
@@ -34,6 +38,7 @@ def register(req: schemas.RegisterRequest, db: Session = Depends(get_db)):
     if new_user.role == "STUDENT":
         profile = models.StudentProfile(
             user_id=new_user.id,
+            tenant_id=tenant_id,
             roll_number=req.rollNumber,
             year_of_study=req.yearOfStudy or 3,
             bio=""
@@ -48,7 +53,10 @@ def register(req: schemas.RegisterRequest, db: Session = Depends(get_db)):
                     db.add(skill_obj)
                     db.commit()
                     db.refresh(skill_obj)
-                user_skill = models.UserSkill(user_id=new_user.id, skill_id=skill_obj.id, proficiency_level=3)
+                user_skill = models.UserSkill(
+                    user_id=new_user.id, skill_id=skill_obj.id,
+                    tenant_id=tenant_id, proficiency_level=3
+                )
                 db.add(user_skill)
 
     elif new_user.role == "FACULTY":
@@ -64,8 +72,12 @@ def register(req: schemas.RegisterRequest, db: Session = Depends(get_db)):
 
     db.commit()
 
-    # Generate Tokens
-    token_data = {"sub": new_user.email, "role": new_user.role, "id": new_user.id}
+    # Generate Tokens (with tenant_id embedded)
+    institution_name = get_tenant_name(tenant_id, db)
+    token_data = {
+        "sub": new_user.email, "role": new_user.role, "id": new_user.id,
+        "tenant_id": tenant_id
+    }
     access_token = create_access_token(token_data)
     refresh_token = create_refresh_token(token_data)
 
@@ -76,7 +88,9 @@ def register(req: schemas.RegisterRequest, db: Session = Depends(get_db)):
         name=new_user.name,
         email=new_user.email,
         role=new_user.role,
-        department=new_user.department
+        department=new_user.department,
+        tenantId=tenant_id,
+        institutionName=institution_name
     )
 
 
@@ -89,7 +103,13 @@ def login(req: schemas.LoginRequest, db: Session = Depends(get_db)):
     if not user.is_active:
         raise HTTPException(status_code=403, detail="Account is disabled")
 
-    token_data = {"sub": user.email, "role": user.role, "id": user.id}
+    tenant_id = user.tenant_id or resolve_tenant_from_email(req.email, db)
+    institution_name = get_tenant_name(tenant_id, db)
+
+    token_data = {
+        "sub": user.email, "role": user.role, "id": user.id,
+        "tenant_id": tenant_id
+    }
     access_token = create_access_token(token_data)
     refresh_token = create_refresh_token(token_data)
 
@@ -100,7 +120,9 @@ def login(req: schemas.LoginRequest, db: Session = Depends(get_db)):
         name=user.name,
         email=user.email,
         role=user.role,
-        department=user.department
+        department=user.department,
+        tenantId=tenant_id,
+        institutionName=institution_name
     )
 
 
@@ -115,7 +137,11 @@ def _do_refresh(token: str, db: Session):
     if not user:
         raise HTTPException(status_code=401, detail="User not found")
 
-    token_data = {"sub": user.email, "role": user.role, "id": user.id}
+    tenant_id = user.tenant_id or payload.get("tenant_id", "INST-001")
+    token_data = {
+        "sub": user.email, "role": user.role, "id": user.id,
+        "tenant_id": tenant_id
+    }
     new_access_token = create_access_token(token_data)
     new_refresh_token = create_refresh_token(token_data)
 

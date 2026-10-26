@@ -7,6 +7,7 @@ from sqlalchemy import func
 from database import get_db
 import models
 from security import get_current_user, require_role
+from tenant import tenant_filter, get_user_tenant_id
 
 router = APIRouter(prefix="/api/v1/admin", tags=["Admin & Oversight"])
 
@@ -15,17 +16,18 @@ def get_admin_overview(
     current_user: models.User = Depends(require_role(["ADMIN"])),
     db: Session = Depends(get_db)
 ):
-    """Returns all KPI analytics data for the admin overview dashboard."""
-    total_students = db.query(models.User).filter(models.User.role == "STUDENT").count()
-    total_faculty = db.query(models.User).filter(models.User.role == "FACULTY").count()
-    total_projects = db.query(models.Project).count()
-    total_teams = db.query(models.Team).count()
-    active_teams = db.query(models.Team).filter(models.Team.status == "ACTIVE").count()
-    completed_teams = db.query(models.Team).filter(models.Team.status == "COMPLETED").count()
-    at_risk_teams = db.query(models.Team).filter(models.Team.is_at_risk == True).count()
+    """Returns all KPI analytics data for the admin overview dashboard (tenant-scoped)."""
+    tid = get_user_tenant_id(current_user)
+    total_students = tenant_filter(db.query(models.User).filter(models.User.role == "STUDENT"), models.User, tid).count()
+    total_faculty = tenant_filter(db.query(models.User).filter(models.User.role == "FACULTY"), models.User, tid).count()
+    total_projects = tenant_filter(db.query(models.Project), models.Project, tid).count()
+    total_teams = tenant_filter(db.query(models.Team), models.Team, tid).count()
+    active_teams = tenant_filter(db.query(models.Team).filter(models.Team.status == "ACTIVE"), models.Team, tid).count()
+    completed_teams = tenant_filter(db.query(models.Team).filter(models.Team.status == "COMPLETED"), models.Team, tid).count()
+    at_risk_teams = tenant_filter(db.query(models.Team).filter(models.Team.is_at_risk == True), models.Team, tid).count()
 
-    # Domain distribution
-    projects = db.query(models.Project).all()
+    # Domain distribution (tenant-scoped)
+    projects = tenant_filter(db.query(models.Project), models.Project, tid).all()
     domain_counts: Dict[str, int] = {}
     for p in projects:
         d = p.domain or "General"
@@ -46,8 +48,8 @@ def get_admin_overview(
             "utilizationPct": round((curr_load * 100.0 / max_cap), 1) if max_cap > 0 else 0
         })
 
-    # Department participation
-    students = db.query(models.User).filter(models.User.role == "STUDENT").all()
+    # Department participation (tenant-scoped)
+    students = tenant_filter(db.query(models.User).filter(models.User.role == "STUDENT"), models.User, tid).all()
     dept_participation: Dict[str, int] = {}
     for s in students:
         dept = s.department or "General"
@@ -68,12 +70,16 @@ def get_admin_overview(
 
 
 @router.get("/stats")
-def get_admin_stats(db: Session = Depends(get_db)):
-    total_students = db.query(models.User).filter(models.User.role == "STUDENT").count()
-    total_faculty = db.query(models.User).filter(models.User.role == "FACULTY").count()
-    total_teams = db.query(models.Team).count()
-    total_projects = db.query(models.Project).count()
-    active_teams = db.query(models.Team).filter(models.Team.status != "DISSOLVED").count()
+def get_admin_stats(
+    current_user: models.User = Depends(require_role(["ADMIN"])),
+    db: Session = Depends(get_db)
+):
+    tid = get_user_tenant_id(current_user)
+    total_students = tenant_filter(db.query(models.User).filter(models.User.role == "STUDENT"), models.User, tid).count()
+    total_faculty = tenant_filter(db.query(models.User).filter(models.User.role == "FACULTY"), models.User, tid).count()
+    total_teams = tenant_filter(db.query(models.Team), models.Team, tid).count()
+    total_projects = tenant_filter(db.query(models.Project), models.Project, tid).count()
+    active_teams = tenant_filter(db.query(models.Team).filter(models.Team.status != "DISSOLVED"), models.Team, tid).count()
 
     return {
         "totalStudents": total_students,
@@ -89,7 +95,7 @@ def get_all_teams(
     current_user: models.User = Depends(require_role(["ADMIN"])),
     db: Session = Depends(get_db)
 ):
-    teams = db.query(models.Team).all()
+    teams = tenant_filter(db.query(models.Team), models.Team, get_user_tenant_id(current_user)).all()
     res = []
     for t in teams:
         res.append({
@@ -110,7 +116,10 @@ def get_at_risk_teams(
     current_user: models.User = Depends(require_role(["ADMIN"])),
     db: Session = Depends(get_db)
 ):
-    teams = db.query(models.Team).filter(models.Team.is_at_risk == True).all()
+    teams = tenant_filter(
+        db.query(models.Team).filter(models.Team.is_at_risk == True),
+        models.Team, get_user_tenant_id(current_user)
+    ).all()
     res = []
     for t in teams:
         res.append({
@@ -130,7 +139,10 @@ def get_admin_governance_requests(
     current_user: models.User = Depends(require_role(["ADMIN"])),
     db: Session = Depends(get_db)
 ):
-    requests = db.query(models.TeamGovernanceRequest).order_by(
+    requests = tenant_filter(
+        db.query(models.TeamGovernanceRequest),
+        models.TeamGovernanceRequest, get_user_tenant_id(current_user)
+    ).order_by(
         models.TeamGovernanceRequest.status.asc(),
         models.TeamGovernanceRequest.created_at.desc()
     ).all()
@@ -217,8 +229,10 @@ def export_cohort_grades(
     current_user: models.User = Depends(require_role(["ADMIN", "FACULTY"])),
     db: Session = Depends(get_db)
 ):
-    """Exports cohort-wide team grades and milestone evaluations as an RFC4180 CSV spreadsheet."""
-    teams = db.query(models.Team).order_by(models.Team.id.asc()).all()
+    """Exports cohort-wide team grades and milestone evaluations as an RFC4180 CSV spreadsheet (tenant-scoped)."""
+    teams = tenant_filter(
+        db.query(models.Team), models.Team, get_user_tenant_id(current_user)
+    ).order_by(models.Team.id.asc()).all()
 
     output = io.StringIO()
     writer = csv.writer(output)

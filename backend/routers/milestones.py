@@ -7,7 +7,8 @@ from sqlalchemy.orm import Session
 from database import get_db
 from config import settings
 import models, schemas
-from security import get_current_user
+from security import get_current_user, require_role
+from tenant import get_user_tenant_id
 
 router = APIRouter(prefix="/api/v1/milestones", tags=["Milestones"])
 
@@ -109,7 +110,7 @@ async def submit_milestone(
 
     # Save ProjectEvidence record
     evidence = models.ProjectEvidence(
-        tenant_id=milestone.tenant_id or "INST-001",
+        tenant_id=get_user_tenant_id(current_user),
         team_id=milestone.team_id,
         milestone_id=milestone.id,
         uploaded_by_id=current_user.id,
@@ -139,7 +140,7 @@ async def submit_milestone(
 def grade_or_evaluate_milestone(
     id: int,
     req: schemas.MilestoneGradeRequest,
-    current_user: models.User = Depends(get_current_user),
+    current_user: models.User = Depends(require_role(["FACULTY", "ADMIN"])),
     db: Session = Depends(get_db)
 ):
     milestone = db.query(models.Milestone).filter(models.Milestone.id == id).first()
@@ -174,7 +175,7 @@ def grade_or_evaluate_milestone(
         # Send notification to team members
         for member in team.members:
             notif = models.Notification(
-                tenant_id=team.tenant_id or "INST-001",
+                tenant_id=get_user_tenant_id(current_user),
                 user_id=member.user_id,
                 message=f"Milestone '{milestone.title}' evaluated! Score: {awarded_points}/100. {req.feedback or ''}".strip(),
                 notification_type="EVALUATION"
