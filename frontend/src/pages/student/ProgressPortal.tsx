@@ -116,18 +116,72 @@ export default function ProgressPortal() {
     if (!team.teamId) { setLoading(false); return }
     setLoading(true); setError('')
     try {
-      const [progressRes, timelineRes] = await Promise.all([
+      const [progressRes, timelineRes, milestonesRes] = await Promise.all([
         api.get(`/progress/team/${team.teamId}`),
-        api.get(`/progress/team/${team.teamId}/timeline`)
+        api.get(`/progress/team/${team.teamId}/timeline`).catch(() => ({ data: [] })),
+        api.get(`/milestones/team/${team.teamId}`).catch(() => ({ data: [] }))
       ])
-      setData(progressRes.data)
-      setTimeline(timelineRes.data)
+
+      const raw = progressRes.data || {}
+      const fetchedMilestones = (Array.isArray(milestonesRes.data) && milestonesRes.data.length > 0)
+        ? milestonesRes.data.map((m: any) => ({
+            id: m.id,
+            title: m.title,
+            description: m.description || '',
+            status: m.status || 'PENDING',
+            dueDate: m.dueDate || null,
+            sequenceOrder: m.sequenceOrder || 1,
+            submittedAt: m.submittedAt || null,
+          }))
+        : (Array.isArray(raw.milestones) ? raw.milestones : [])
+
+      const fetchedContributions = Array.isArray(raw.contributions) && raw.contributions.length > 0
+        ? raw.contributions
+        : (team.members && team.members.length > 0
+            ? team.members.map((m: any, idx: number) => {
+                const name = m.user?.name || m.name || `Member ${idx + 1}`
+                return {
+                  studentId: m.user?.id || m.userId || idx,
+                  studentName: name,
+                  avatarInitial: name.charAt(0).toUpperCase() || 'U',
+                  contributionPercentage: Math.round(100 / team.members.length),
+                  tasksCompleted: 0,
+                  tasksTotal: 0,
+                  membershipStatus: m.membershipStatus || 'ACTIVE'
+                }
+              })
+            : [])
+
+      const normalized: TeamProgressData = {
+        teamId: raw.teamId || team.teamId,
+        teamName: raw.teamName || team.teamName || 'My Team',
+        teamStatus: raw.teamStatus || raw.status || 'ACTIVE',
+        projectTitle: raw.projectTitle || team.projectFocus || 'Active Project',
+        overallProgress: raw.overallProgress ?? raw.progressPercentage ?? 0,
+        currentPhase: raw.currentPhase || (raw.progressPercentage >= 100 ? 'COMPLETED' : raw.progressPercentage > 50 ? 'DEVELOPMENT' : 'INITIALIZATION'),
+        teamHealth: raw.teamHealth || (raw.isAtRisk ? 'AT_RISK' : 'ON_TRACK'),
+        totalTasks: raw.totalTasks ?? 0,
+        completedTasks: raw.completedTasks ?? 0,
+        inProgressTasks: raw.inProgressTasks ?? 0,
+        pendingTasks: raw.pendingTasks ?? 0,
+        overdueTasks: raw.overdueTasks ?? 0,
+        totalMilestones: raw.totalMilestones ?? fetchedMilestones.length,
+        completedMilestones: raw.completedMilestones ?? fetchedMilestones.filter((m: any) => m.status === 'COMPLETED' || m.status === 'APPROVED').length,
+        evidenceSubmitted: raw.evidenceSubmitted ?? 0,
+        milestones: fetchedMilestones,
+        contributions: fetchedContributions,
+        hasMentor: raw.hasMentor ?? Boolean(team.hasMentor),
+        createdAt: raw.createdAt || new Date().toISOString()
+      }
+
+      setData(normalized)
+      setTimeline(Array.isArray(timelineRes.data) ? timelineRes.data : [])
     } catch {
       setError('Could not load progress data.')
     } finally {
       setLoading(false)
     }
-  }, [team.teamId])
+  }, [team.teamId, team.teamName, team.projectFocus, team.members, team.hasMentor])
 
   useEffect(() => { load() }, [load])
 
@@ -225,10 +279,10 @@ export default function ProgressPortal() {
       {/* Stats Row */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {[
-          { label: 'Tasks Done', val: `${data.completedTasks}/${data.totalTasks}`, icon: <CheckCircle2 size={18} className="text-emerald-600" />, cls: 'border-emerald-200 bg-emerald-50/20' },
-          { label: 'In Progress', val: data.inProgressTasks, icon: <Activity size={18} className="text-sky-600" />, cls: 'border-sky-200 bg-sky-50/20' },
-          { label: 'Overdue', val: data.overdueTasks, icon: <AlertTriangle size={18} className="text-red-600" />, cls: data.overdueTasks > 0 ? 'border-red-200 bg-red-50/20' : 'border-slate-200' },
-          { label: 'Evidence', val: data.evidenceSubmitted, icon: <FileText size={18} className="text-purple-600" />, cls: 'border-purple-200 bg-purple-50/20' },
+          { label: 'Tasks Done', val: `${data.completedTasks || 0}/${data.totalTasks || 0}`, icon: <CheckCircle2 size={18} className="text-emerald-600" />, cls: 'border-emerald-200 bg-emerald-50/20' },
+          { label: 'In Progress', val: data.inProgressTasks || 0, icon: <Activity size={18} className="text-sky-600" />, cls: 'border-sky-200 bg-sky-50/20' },
+          { label: 'Overdue', val: data.overdueTasks || 0, icon: <AlertTriangle size={18} className="text-red-600" />, cls: (data.overdueTasks || 0) > 0 ? 'border-red-200 bg-red-50/20' : 'border-slate-200' },
+          { label: 'Evidence', val: data.evidenceSubmitted || 0, icon: <FileText size={18} className="text-purple-600" />, cls: 'border-purple-200 bg-purple-50/20' },
         ].map((s, i) => (
           <motion.div key={s.label} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
             transition={{ delay: i * 0.07 }}
@@ -289,7 +343,7 @@ export default function ProgressPortal() {
         {activeTab === 'milestones' && (
           <motion.div key="milestones" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
             className="space-y-3">
-            {data.milestones.length === 0 ? (
+            {(!data?.milestones || data.milestones.length === 0) ? (
               <div className="card p-8 text-center text-slate-400">No milestones defined yet.</div>
             ) : data.milestones.map((m, i) => (
               <motion.div key={m.id} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}
@@ -317,7 +371,7 @@ export default function ProgressPortal() {
         {activeTab === 'contributions' && (
           <motion.div key="contributions" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
             className="space-y-4">
-            {data.contributions.length === 0 ? (
+            {(!data?.contributions || data.contributions.length === 0) ? (
               <div className="card p-8 text-center text-slate-400">No contribution data yet.</div>
             ) : data.contributions.map((c, i) => (
               <motion.div key={c.studentId} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
@@ -335,7 +389,7 @@ export default function ProgressPortal() {
                     </div>
                     <span className="text-xs text-slate-500">{c.tasksCompleted}/{c.tasksTotal} tasks</span>
                   </div>
-                  <span className="text-lg font-bold text-slate-800">{c.contributionPercentage.toFixed(1)}%</span>
+                  <span className="text-lg font-bold text-slate-800">{(c.contributionPercentage || 0).toFixed(1)}%</span>
                 </div>
                 <div className="relative h-2 bg-slate-100 rounded-full overflow-hidden">
                   <motion.div
@@ -344,7 +398,7 @@ export default function ProgressPortal() {
                       ? 'linear-gradient(90deg, #92400e, #d97706)'
                       : 'linear-gradient(90deg, #1a5fb4, #0d9488)' }}
                     initial={{ width: 0 }}
-                    animate={{ width: `${Math.min(c.contributionPercentage, 100)}%` }}
+                    animate={{ width: `${Math.min(c.contributionPercentage || 0, 100)}%` }}
                     transition={{ duration: 0.9, delay: i * 0.1, ease: 'easeOut' }}
                   />
                 </div>
@@ -356,7 +410,7 @@ export default function ProgressPortal() {
         {activeTab === 'timeline' && (
           <motion.div key="timeline" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
             className="card p-6">
-            {timeline.length === 0 ? (
+            {(!timeline || timeline.length === 0) ? (
               <div className="text-center text-slate-400 py-8">No events recorded yet.</div>
             ) : (
               <div>

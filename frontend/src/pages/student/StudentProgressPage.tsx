@@ -98,8 +98,25 @@ export default function StudentProgressPage() {
         api.get(`/progress/student/${resolvedStudentId}/team/${team.teamId}`),
         api.get(`/progress/student/${resolvedStudentId}/history`)
       ])
-      setData(progressRes.data)
-      setHistory(historyRes.data)
+      const raw = progressRes.data || {}
+      const normalized: ProgressData = {
+        studentId: raw.studentId || resolvedStudentId,
+        studentName: raw.studentName || user?.name || 'Student',
+        department: raw.department || user?.department || 'General',
+        email: raw.email || user?.email || '',
+        membershipStatus: raw.membershipStatus || 'ACTIVE',
+        personalProgress: raw.personalProgress ?? (raw.contributionPercentage ?? 0),
+        tasksCompleted: raw.tasksCompleted ?? 0,
+        tasksInProgress: raw.tasksInProgress ?? 0,
+        tasksPending: raw.tasksPending ?? 0,
+        tasksOverdue: raw.tasksOverdue ?? 0,
+        tasksTotal: raw.tasksTotal ?? 0,
+        contributionPercentage: raw.contributionPercentage ?? 0,
+        taskHistory: Array.isArray(raw.taskHistory) ? raw.taskHistory : [],
+        evidence: Array.isArray(raw.evidence) ? raw.evidence : []
+      }
+      setData(normalized)
+      setHistory(Array.isArray(historyRes.data) ? historyRes.data : [])
     } catch {
       setError('Could not load student progress.')
     } finally {
@@ -208,9 +225,9 @@ export default function StudentProgressPage() {
         {activeTab === 'tasks' && (
           <motion.div key="tasks" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
             className="space-y-3">
-            {data.taskHistory.length === 0 ? (
+            {(!data?.taskHistory || data.taskHistory.length === 0) ? (
               <div className="card p-8 text-center text-slate-400">No tasks assigned yet.</div>
-            ) : data.taskHistory.map((task, i) => (
+            ) : (data.taskHistory || []).map((task, i) => (
               <motion.div key={task.id} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.05 }} className="card p-4">
                 <div className="flex items-start justify-between gap-3 flex-wrap">
@@ -254,13 +271,13 @@ export default function StudentProgressPage() {
         {activeTab === 'evidence' && (
           <motion.div key="evidence" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
             className="space-y-3">
-            {data.evidence.length === 0 ? (
+            {(!data?.evidence || data.evidence.length === 0) ? (
               <div className="card p-8 text-center text-slate-400">
                 <FileText className="mx-auto mb-3 opacity-30" size={32} />
                 <p>No evidence uploaded yet.</p>
                 <p className="text-xs mt-1">Submit evidence through your task details.</p>
               </div>
-            ) : data.evidence.map((ev, i) => (
+            ) : (data.evidence || []).map((ev, i) => (
               <motion.div key={ev.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.06 }} className="card p-4">
                 <div className="flex items-start gap-3">
@@ -304,9 +321,9 @@ export default function StudentProgressPage() {
           <motion.div key="history" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
             className="space-y-3">
             <p className="text-xs text-slate-500 px-1">All teams this student has participated in — past and present.</p>
-            {history.length === 0 ? (
+            {(!history || history.length === 0) ? (
               <div className="card p-8 text-center text-slate-400">No team history found.</div>
-            ) : history.map((h, i) => (
+            ) : (history || []).map((h, i) => (
               <motion.div key={h.teamId} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.07 }} className="card p-4">
                 <div className="flex items-start justify-between gap-3 flex-wrap">
