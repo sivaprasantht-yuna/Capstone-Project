@@ -175,6 +175,15 @@ def ws_info():
     }
 
 
+@app.get("/", tags=["Root"])
+def root():
+    return {
+        "message": "Capstone Collaboration Platform Backend is running successfully!",
+        "version": "2.0.0",
+        "docs": "/docs",
+        "health": "/health"
+    }
+
 @app.get("/health", tags=["Health"])
 def health():
     return {
