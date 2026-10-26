@@ -1,7 +1,11 @@
 import os
 import shutil
 from typing import List
-from fastembed import TextEmbedding
+try:
+    from fastembed import TextEmbedding
+except Exception:
+    TextEmbedding = None
+
 from app.config import settings
 
 class EmbeddingService:
@@ -12,6 +16,10 @@ class EmbeddingService:
 
     def _ensure_model(self):
         if self.model is not None:
+            return
+        if TextEmbedding is None:
+            print("[Embedder] FastEmbed library is not available. Falling back to zero-vectors.")
+            self.model = None
             return
         print(f"[Embedder] Initializing local FastEmbed model '{settings.EMBEDDING_MODEL_NAME}' on CPU...")
         try:
