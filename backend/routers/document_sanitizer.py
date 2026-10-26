@@ -22,9 +22,8 @@ class TextPayload(BaseModel):
 @router.post("/process-text")
 async def process_project_text(payload: TextPayload):
     """
-    Accept pre-extracted plain text (a few KB) instead of a raw PDF binary.
-    Java strips the PDF locally with PDFBox and sends only this lean payload,
-    avoiding Vercel's function size limits entirely.
+    Accept pre-extracted plain text (a few KB) instead of a raw PDF binary,
+    avoiding payload size limits and memory overhead entirely.
     """
     if not payload.raw_text.strip():
         raise HTTPException(

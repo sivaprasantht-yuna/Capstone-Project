@@ -55,7 +55,7 @@ graph TB
     end
 
     subgraph Gateway_Tier [Edge & Gateway Layer]
-        EDGE[Vercel CDN / Reverse Proxy<br/>SSL Termination / Static Asset Cache]
+        EDGE[Netlify CDN / Global Edge Network<br/>SSL Termination / Static Asset Cache]
     end
 
     subgraph App_Tier [Core Application Microservice]
