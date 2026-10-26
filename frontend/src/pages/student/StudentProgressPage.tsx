@@ -192,10 +192,10 @@ export default function StudentProgressPage() {
       </motion.div>
 
       {/* Tabs */}
-      <div className="flex gap-1 p-1 bg-slate-100 rounded-xl border border-slate-200">
+      <div className="flex gap-1 p-1 bg-slate-100 rounded-xl border border-slate-200 overflow-x-auto no-scrollbar max-w-full">
         {tabs.map(t => (
           <button key={t.id} onClick={() => setActiveTab(t.id as any)}
-            className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+            className={`flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs sm:text-sm font-medium whitespace-nowrap flex-shrink-0 transition-all ${
               activeTab === t.id ? 'bg-white text-primary-700 shadow-xs border border-slate-200' : 'text-slate-600 hover:text-slate-900'
             }`}>
             {t.icon}{t.label}
@@ -211,7 +211,7 @@ export default function StudentProgressPage() {
             {data.taskHistory.length === 0 ? (
               <div className="card p-8 text-center text-slate-400">No tasks assigned yet.</div>
             ) : data.taskHistory.map((task, i) => (
-              <motion.div key={task.id} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }}
+              <motion.div key={task.id} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.05 }} className="card p-4">
                 <div className="flex items-start justify-between gap-3 flex-wrap">
                   <div className="flex-1">

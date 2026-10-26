@@ -138,7 +138,7 @@ export default function LoginPage() {
       </div>
 
       {/* ── Right form panel ──────────────────────────────────────────────── */}
-      <div className="flex items-center justify-center p-6 lg:p-12 bg-white">
+      <div className="flex items-center justify-center p-4 sm:p-6 lg:p-12 bg-white">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -146,7 +146,7 @@ export default function LoginPage() {
           className="w-full max-w-md"
         >
           {/* Mobile logo */}
-          <div className="flex items-center gap-3 mb-10 lg:hidden">
+          <div className="flex items-center gap-3 mb-8 lg:hidden">
             <div className="w-9 h-9 rounded-xl flex items-center justify-center shadow-sm"
                  style={{ background: 'linear-gradient(135deg, #1a5fb4, #0d9488)' }}>
               <BookOpen size={18} className="text-white" />
@@ -157,9 +157,9 @@ export default function LoginPage() {
           </div>
 
           {/* Heading */}
-          <div className="mb-8">
-            <p className="section-subhead mb-2">Welcome Back</p>
-            <h1 className="text-3xl font-display font-bold text-slate-800 mb-2"
+          <div className="mb-6 sm:mb-8">
+            <p className="section-subhead mb-1.5">Welcome Back</p>
+            <h1 className="text-2xl sm:text-3xl font-display font-bold text-slate-800 mb-2"
                 style={{ fontFamily: 'Outfit, sans-serif' }}>
               Sign in to your account
             </h1>

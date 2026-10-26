@@ -100,12 +100,12 @@ export default function TeamGovernancePage() {
 
       {/* Filter Tabs & Search */}
       <div className="flex flex-col sm:flex-row gap-3 items-center justify-between">
-        <div className="flex items-center gap-1.5 p-1 bg-slate-100 rounded-xl w-full sm:w-auto">
+        <div className="flex items-center gap-1.5 p-1 bg-slate-100 rounded-xl w-full sm:w-auto overflow-x-auto no-scrollbar max-w-full">
           {(['PENDING', 'APPROVED', 'REJECTED', 'ALL'] as const).map(tab => (
             <button
               key={tab}
               onClick={() => setFilter(tab)}
-              className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 ${
+              className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap flex-shrink-0 transition-all flex items-center gap-1.5 ${
                 filter === tab
                   ? 'bg-white text-slate-900 shadow-2xs'
                   : 'text-slate-600 hover:text-slate-900'
@@ -209,7 +209,7 @@ export default function TeamGovernancePage() {
 
                   {/* Right Actions */}
                   {isPending && (
-                    <div className="flex flex-col sm:flex-row lg:flex-col gap-2 min-w-[200px] justify-center">
+                    <div className="flex flex-col sm:flex-row lg:flex-col gap-2 w-full lg:w-auto lg:min-w-[200px] justify-center">
                       {reviewingId === req.id ? (
                         <div className="space-y-2 p-3 bg-slate-50 border border-slate-200 rounded-xl animate-fade-in">
                           <input

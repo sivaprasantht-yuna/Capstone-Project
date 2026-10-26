@@ -120,7 +120,7 @@ export default function CustomSelect({
             animate={{ opacity: 1, y: 4, scale: 1 }}
             exit={{ opacity: 0, y: -4, scale: 0.98 }}
             transition={{ duration: 0.15, ease: 'easeOut' }}
-            className="absolute left-0 right-0 top-full z-50 min-w-[200px] max-h-60 overflow-y-auto rounded-xl border border-slate-200 bg-white shadow-xl custom-scrollbar py-1"
+            className="absolute left-0 right-0 top-full z-50 min-w-full max-w-[calc(100vw-2rem)] max-h-60 overflow-y-auto rounded-xl border border-slate-200 bg-white shadow-xl custom-scrollbar py-1"
             style={{
               boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05)',
             }}

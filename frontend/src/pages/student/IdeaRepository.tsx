@@ -237,53 +237,53 @@ export default function IdeaRepository() {
       </div>
 
       {/* ── Navigation Tabs ── */}
-      <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 pb-4">
-        <div className="flex items-center gap-2 p-1 rounded-2xl bg-slate-100 border border-slate-200">
+      <div className="flex flex-col gap-4 border-b border-slate-200 pb-4">
+        <div className="flex items-center gap-2 p-1 rounded-2xl bg-slate-100 border border-slate-200 overflow-x-auto no-scrollbar max-w-full">
           <button
             onClick={() => setActiveTab('reference')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all ${
+            className={`flex items-center gap-1.5 px-3 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold whitespace-nowrap flex-shrink-0 transition-all ${
               activeTab === 'reference'
                 ? 'bg-white text-primary-700 shadow-sm border border-slate-200'
                 : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/50'
             }`}
           >
-            <Globe size={16} /> Reference Repository ({projects.length})
+            <Globe size={15} /> <span className="hidden sm:inline">Reference</span> Repo ({projects.length})
           </button>
           <button
             onClick={() => setActiveTab('my')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all ${
+            className={`flex items-center gap-1.5 px-3 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold whitespace-nowrap flex-shrink-0 transition-all ${
               activeTab === 'my'
                 ? 'bg-white text-primary-700 shadow-sm border border-slate-200'
                 : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/50'
             }`}
           >
-            <FolderGit2 size={16} /> My Personal Repository ({myProjects.length})
+            <FolderGit2 size={15} /> <span className="hidden sm:inline">My Personal</span><span className="sm:hidden">My</span> Repo ({myProjects.length})
           </button>
           <button
             onClick={() => setActiveTab('showcase')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all ${
+            className={`flex items-center gap-1.5 px-3 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold whitespace-nowrap flex-shrink-0 transition-all ${
               activeTab === 'showcase'
                 ? 'bg-white text-primary-700 shadow-sm border border-slate-200'
                 : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/50'
             }`}
           >
-            <Sparkles size={16} className="text-amber-500" /> Inter-College Showcase ({showcaseProjects.length})
+            <Sparkles size={15} className="text-amber-500" /> Showcase ({showcaseProjects.length})
           </button>
         </div>
 
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="relative min-w-[220px]">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full">
+          <div className="relative flex-1 min-w-0">
             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
             <input
               type="text"
               placeholder="Search repository..."
               value={search}
               onChange={e => setSearch(e.target.value)}
-              className="input pl-10 text-sm py-2 bg-white"
+              className="input pl-10 text-sm py-2 bg-white w-full"
             />
           </div>
 
-          <div className="min-w-[180px]">
+          <div className="flex-1 min-w-0 sm:max-w-[200px]">
             <CustomSelect
               value={selectedDomain}
               onChange={setSelectedDomain}

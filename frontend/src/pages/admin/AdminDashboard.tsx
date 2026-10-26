@@ -176,13 +176,18 @@ export default function AdminDashboard() {
             {stats.mentorLoadDistribution.map((mentor, i) => (
               <motion.div
                 key={mentor.name}
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
+                initial={{ opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.06 }}
-                className="flex items-center gap-4"
+                className="flex flex-col sm:flex-row sm:items-center gap-1.5 sm:gap-4 p-2.5 sm:p-0 rounded-xl bg-slate-50/60 sm:bg-transparent"
               >
-                <div className="w-36 text-sm text-slate-700 font-medium text-right flex-shrink-0 truncate">{mentor.name}</div>
-                <div className="flex-1 match-bar bg-slate-100">
+                <div className="flex items-center justify-between sm:w-36 flex-shrink-0">
+                  <span className="text-sm text-slate-700 font-medium truncate sm:text-right w-full">{mentor.name}</span>
+                  <span className="sm:hidden text-xs text-slate-500 flex-shrink-0 font-mono ml-2">
+                    {mentor.currentLoad}/{mentor.maxCapacity} teams
+                  </span>
+                </div>
+                <div className="flex-1 match-bar bg-slate-100 w-full">
                   <motion.div
                     className="match-bar-fill h-full rounded-full"
                     style={{
@@ -195,10 +200,10 @@ export default function AdminDashboard() {
                     transition={{ delay: i * 0.06 + 0.3, duration: 0.6 }}
                   />
                 </div>
-                <div className="text-xs text-slate-500 w-20 flex-shrink-0">
+                <div className="hidden sm:block text-xs text-slate-500 w-20 flex-shrink-0">
                   {mentor.currentLoad}/{mentor.maxCapacity} teams
                 </div>
-                <span className={`badge ${mentor.utilizationPct > 80 ? 'badge-danger' : mentor.utilizationPct > 50 ? 'badge-warning' : 'badge-teal'}`}>
+                <span className={`badge self-end sm:self-auto text-[11px] ${mentor.utilizationPct > 80 ? 'badge-danger' : mentor.utilizationPct > 50 ? 'badge-warning' : 'badge-teal'}`}>
                   {mentor.utilizationPct.toFixed(0)}%
                 </span>
               </motion.div>

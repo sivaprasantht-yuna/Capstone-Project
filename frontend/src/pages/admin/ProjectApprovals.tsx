@@ -25,17 +25,17 @@ export default function ProjectApprovals() {
         <div className="card p-10 text-center text-slate-400">No pending project approvals.</div>
       ) : projects.map(p => (
         <div key={p.id} className="card p-5 shadow-xs">
-          <div className="flex items-start justify-between gap-4">
-            <div>
+          <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+            <div className="flex-1 min-w-0">
               <div className="font-semibold text-slate-800">{p.title}</div>
               <div className="text-sm text-slate-500 mt-1 line-clamp-2">{p.description}</div>
-              <div className="mt-2 flex gap-2">
+              <div className="mt-2 flex flex-wrap gap-2">
                 {p.domain && <span className="badge badge-primary">{p.domain}</span>}
               </div>
             </div>
-            <div className="flex gap-2 flex-shrink-0">
-              <button onClick={() => reject(p.id)} className="btn-secondary py-2 px-3 text-sm flex items-center gap-1"><X size={14} /> Reject</button>
-              <button onClick={() => approve(p.id)} className="btn-teal py-2 px-3 text-sm flex items-center gap-1"><Check size={14} /> Approve</button>
+            <div className="flex gap-2 flex-shrink-0 w-full sm:w-auto">
+              <button onClick={() => reject(p.id)} className="btn-secondary py-2 px-3 text-xs sm:text-sm flex-1 sm:flex-initial flex items-center justify-center gap-1"><X size={14} /> Reject</button>
+              <button onClick={() => approve(p.id)} className="btn-teal py-2 px-3 text-xs sm:text-sm flex-1 sm:flex-initial flex items-center justify-center gap-1"><Check size={14} /> Approve</button>
             </div>
           </div>
         </div>

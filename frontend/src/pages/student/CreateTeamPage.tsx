@@ -175,16 +175,16 @@ export default function CreateTeamPage() {
 
         {/* ── Right: Form ─────────────────────────────────────────── */}
         <div className="lg:col-span-8">
-          <div className="rounded-3xl p-8 border border-slate-200 bg-white shadow-xs">
+          <div className="rounded-2xl sm:rounded-3xl p-4 sm:p-8 border border-slate-200 bg-white shadow-xs">
             <AnimatePresence mode="wait">
 
               {/* Step 1: Basic Info */}
               {step === 1 && (
                 <motion.div
                   key="step1"
-                  initial={{ opacity: 0, x: -16 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: 16 }}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
                   className="space-y-6"
                 >
                   <div>
@@ -215,7 +215,7 @@ export default function CreateTeamPage() {
                     <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-2">
                       Maximum Team Size <span className="text-slate-400 normal-case">(2–6 members, includes you)</span>
                     </label>
-                    <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-2 sm:gap-4 flex-wrap">
                       {[2, 3, 4, 5, 6].map(n => (
                         <button
                           key={n}
@@ -259,9 +259,9 @@ export default function CreateTeamPage() {
               {step === 2 && (
                 <motion.div
                   key="step2"
-                  initial={{ opacity: 0, x: -16 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: 16 }}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
                   className="space-y-6"
                 >
                   <div>
@@ -298,9 +298,9 @@ export default function CreateTeamPage() {
               {step === 3 && (
                 <motion.div
                   key="step3"
-                  initial={{ opacity: 0, x: -16 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: 16 }}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
                   className="space-y-6"
                 >
                   <div>
@@ -346,9 +346,9 @@ export default function CreateTeamPage() {
               {step === 4 && (
                 <motion.div
                   key="step4"
-                  initial={{ opacity: 0, x: -16 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: 16 }}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
                   className="space-y-6"
                 >
                   <div>

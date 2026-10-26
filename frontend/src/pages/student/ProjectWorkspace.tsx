@@ -258,7 +258,7 @@ export default function ProjectWorkspace() {
                   : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/50'
               }`}
             >
-              <Layers size={15} /> Milestones & Submissions ({milestones.length})
+              <Layers size={15} /> <span className="hidden sm:inline">Milestones & </span>Submissions ({milestones.length})
             </button>
 
             <button
@@ -286,7 +286,7 @@ export default function ProjectWorkspace() {
                   : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/50'
               }`}
             >
-              <BookOpen size={15} /> Documentation & README
+              <BookOpen size={15} /> <span className="hidden sm:inline">Documentation & </span>README
             </button>
           </div>
 
@@ -467,7 +467,7 @@ export default function ProjectWorkspace() {
                         <div className="w-8 h-8 rounded-full bg-primary-600 flex items-center justify-center text-white text-xs font-bold flex-shrink-0 shadow-xs">
                           {msg.senderName?.[0]?.toUpperCase() || 'U'}
                         </div>
-                        <div className={`max-w-md ${isMe ? 'items-end' : 'items-start'} flex flex-col`}>
+                        <div className={`max-w-[85%] sm:max-w-md ${isMe ? 'items-end' : 'items-start'} flex flex-col`}>
                           <span className="text-[11px] text-slate-500 mb-1 font-medium">{msg.senderName}</span>
                           <div
                             className={`px-4 py-2.5 rounded-2xl text-sm shadow-xs ${
@@ -508,8 +508,8 @@ export default function ProjectWorkspace() {
                   value={chatInput}
                   onChange={e => setChatInput(e.target.value)}
                   onKeyDown={handleChatKey}
-                  placeholder="Type a message to your team... (Press Enter to send)"
-                  className="w-full flex-1 px-4 py-2.5 rounded-xl border border-slate-300 bg-white text-slate-900 placeholder-slate-400 text-sm outline-none focus:border-primary-600 focus:ring-2 focus:ring-primary-100 transition-all"
+                  placeholder="Type a message... (Enter to send)"
+                  className="w-full flex-1 px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl border border-slate-300 bg-white text-slate-900 placeholder-slate-400 text-xs sm:text-sm outline-none focus:border-primary-600 focus:ring-2 focus:ring-primary-100 transition-all"
                 />
                 <button
                   type="button"

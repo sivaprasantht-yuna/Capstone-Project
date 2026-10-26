@@ -137,7 +137,7 @@ export default function StudentDashboard() {
               <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${kpi.color} flex items-center justify-center text-white mb-2 shadow-xs`}>
                 {kpi.icon}
               </div>
-              <div className="text-xl font-bold text-slate-800" style={{ fontFamily: 'Outfit, sans-serif' }}>{kpi.value}</div>
+              <div className="text-base sm:text-xl font-bold text-slate-800 truncate" style={{ fontFamily: 'Outfit, sans-serif' }}>{kpi.value}</div>
               <div className="text-xs text-slate-500">{kpi.label}</div>
             </Link>
           </motion.div>

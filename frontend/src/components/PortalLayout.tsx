@@ -126,7 +126,7 @@ export default function PortalLayout({ navItems, children, portalTitle, portalCo
   const roleColors = ROLE_COLORS[user?.role || ''] || ROLE_COLORS['STUDENT']
 
   return (
-    <div className="flex h-screen overflow-hidden bg-slate-50">
+    <div className="flex h-screen h-[100dvh] w-full max-w-full overflow-hidden bg-slate-50 relative">
 
       {/* ── Desktop Left Sidebar ────────────────────────────────────────────── */}
       <aside
@@ -458,7 +458,7 @@ export default function PortalLayout({ navItems, children, portalTitle, portalCo
               </nav>
 
               {/* User Profile & Prominent Logout */}
-              <div className="p-4 pb-8 sm:pb-4 border-t border-slate-200/80 bg-slate-50 flex flex-col gap-3">
+              <div className="p-4 pb-10 sm:pb-4 border-t border-slate-200/80 bg-slate-50 flex flex-col gap-3">
                 <div className="flex items-center gap-3 min-w-0">
                   <div
                     onClick={handleNavigateProfile}
@@ -492,7 +492,7 @@ export default function PortalLayout({ navItems, children, portalTitle, portalCo
       </AnimatePresence>
 
       {/* ── Main Content Area ───────────────────────────────────────────── */}
-      <div className="flex-1 flex flex-col h-full min-w-0 overflow-hidden bg-slate-50">
+      <div className="flex-1 flex flex-col h-full min-w-0 max-w-full overflow-hidden bg-slate-50">
 
         {/* Minimal Top Header Bar */}
         <header className="flex-shrink-0 flex items-center justify-between px-4 lg:px-6 h-16 border-b border-slate-200/80 bg-white z-20">
@@ -547,7 +547,8 @@ export default function PortalLayout({ navItems, children, portalTitle, portalCo
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     exit={{ opacity: 0, y: 6, scale: 0.96 }}
                     transition={{ duration: 0.15 }}
-                    className="absolute right-0 top-12 w-80 z-50 max-h-96 overflow-y-auto rounded-2xl border border-slate-200 bg-white shadow-xl"
+                    className="absolute right-0 sm:right-0 top-12 w-[calc(100vw-2rem)] sm:w-80 max-w-sm z-50 max-h-96 overflow-y-auto rounded-2xl border border-slate-200 bg-white shadow-xl"
+                    style={{ right: 'min(0px, calc(100vw - 340px - 1rem))' }}
                   >
                     <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100 bg-slate-50/50">
                       <span className="font-semibold text-slate-800 text-sm" style={{ fontFamily: 'Outfit, sans-serif' }}>
@@ -622,8 +623,8 @@ export default function PortalLayout({ navItems, children, portalTitle, portalCo
         </header>
 
         {/* Scrollable Page Body */}
-        <main className="flex-1 overflow-y-auto bg-slate-50">
-          <div className="p-4 lg:p-6">
+        <main className="flex-1 overflow-y-auto overflow-x-hidden bg-slate-50 w-full min-w-0 max-w-full">
+          <div className="p-4 lg:p-6 w-full max-w-full overflow-x-hidden">
             {children}
           </div>
         </main>

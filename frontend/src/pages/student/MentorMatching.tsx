@@ -134,8 +134,8 @@ export default function MentorMatching() {
           {mentors.map((mentor, i) => (
             <motion.div
               key={mentor.faculty_id}
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
               transition={{ delay: i * 0.1 }}
               className={`card p-6 border ${rankColors[i] || 'border-slate-200'}`}
             >

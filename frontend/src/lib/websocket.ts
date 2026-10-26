@@ -30,10 +30,42 @@ function getBackoffDelay(): number {
   return Math.min(BASE_DELAY_MS * Math.pow(1.5, connectAttempts), MAX_DELAY_MS) + (Math.random() * 800)
 }
 
+function getWsBaseUrl(): string {
+  // 1. Explicit VITE_WS_URL from environment (e.g., wss://capstone-project-khcp.onrender.com/ws)
+  const envWs = import.meta.env.VITE_WS_URL
+  if (envWs && typeof envWs === 'string' && envWs.trim()) {
+    return envWs.trim().replace(/\/ws\/?$/, '').replace(/\/+$/, '')
+  }
+
+  // 2. Derive from VITE_API_URL (e.g., https://capstone-project-khcp.onrender.com/api/v1)
+  const envApi = import.meta.env.VITE_API_URL
+  if (envApi && typeof envApi === 'string' && envApi.startsWith('http')) {
+    try {
+      const url = new URL(envApi)
+      const protocol = url.protocol === 'https:' ? 'wss:' : 'ws:'
+      return `${protocol}//${url.host}`
+    } catch {}
+  }
+
+  // 3. Fallback to current browser host (used for local Vite dev proxy: /ws -> localhost:8000)
+  if (typeof window !== 'undefined') {
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
+    return `${protocol}//${window.location.host}`
+  }
+
+  return 'ws://localhost:8000'
+}
+
 /** Checks if the backend is reachable before opening a socket. */
 async function isBackendReachable(): Promise<boolean> {
   try {
-    const res = await fetch('/api/v1/skills', { method: 'HEAD', signal: AbortSignal.timeout(2000) })
+    const envApi = import.meta.env.VITE_API_URL
+    let checkUrl = '/api/v1/skills'
+    if (envApi && typeof envApi === 'string' && envApi.startsWith('http')) {
+      const base = envApi.replace(/\/+$/, '')
+      checkUrl = `${base.replace(/\/api\/v1\/?$/, '')}/health`
+    }
+    const res = await fetch(checkUrl, { method: 'GET', signal: AbortSignal.timeout(4000) })
     return res.ok || res.status < 500
   } catch {
     return false
@@ -106,11 +138,11 @@ function doConnect(userId: number) {
   const { user } = store.getState().auth
   const token = user?.accessToken || ''
 
-  const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
-  const wsHost = window.location.host
+  const baseUrl = getWsBaseUrl()
   const teamPath = currentTeamId ? `/ws/chat/${currentTeamId}` : '/ws'
-  const wsUrl = `${wsProtocol}//${wsHost}${teamPath}?token=${encodeURIComponent(token)}`
+  const wsUrl = `${baseUrl}${teamPath}${token ? `?token=${encodeURIComponent(token)}` : ''}`
 
+  console.log(`[WS] Connecting to ${baseUrl}${teamPath}`)
   socket = new WebSocket(wsUrl)
 
   socket.onopen = () => {

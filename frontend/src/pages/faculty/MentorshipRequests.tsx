@@ -83,10 +83,10 @@ export default function MentorshipRequests() {
         <p className="text-slate-500 text-sm mt-1">Manage mentorship offers and team governance requests.</p>
       </div>
 
-      <div className="flex gap-2 p-1.5 bg-slate-100 rounded-xl border border-slate-200">
+      <div className="flex gap-2 p-1.5 bg-slate-100 rounded-xl border border-slate-200 overflow-x-auto no-scrollbar max-w-full">
         {tabs.map(t => (
           <button key={t.id} onClick={() => setActiveTab(t.id)}
-            className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold transition-all ${
+            className={`flex-1 sm:flex-initial flex items-center justify-center gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg text-xs sm:text-sm font-semibold whitespace-nowrap flex-shrink-0 transition-all ${
               activeTab === t.id ? 'bg-white text-primary-700 shadow-xs border border-slate-200' : 'text-slate-600 hover:text-slate-900'
             }`}>
             {t.icon} {t.label}
@@ -108,7 +108,7 @@ export default function MentorshipRequests() {
               {mentorships.length === 0 ? (
                 <div className="card p-12 text-center text-slate-400">No pending mentorship requests.</div>
               ) : mentorships.map((req, i) => (
-                <motion.div key={req.id} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.05 }} className="card p-5 shadow-xs">
+                <motion.div key={req.id} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }} className="card p-5 shadow-xs">
                   <div className="flex items-start justify-between flex-wrap gap-4">
                     <div className="flex items-center gap-4">
                       <div className="w-12 h-12 bg-emerald-50 border border-emerald-200 rounded-xl flex items-center justify-center text-emerald-600">
@@ -148,7 +148,7 @@ export default function MentorshipRequests() {
               {dismantles.length === 0 ? (
                 <div className="card p-12 text-center text-slate-400">No pending dismantle requests.</div>
               ) : dismantles.map((req, i) => (
-                <motion.div key={req.id} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.05 }} className="card p-5 border-red-200 bg-red-50/20 shadow-xs">
+                <motion.div key={req.id} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }} className="card p-5 border-red-200 bg-red-50/20 shadow-xs">
                   <div className="flex items-start gap-4">
                     <div className="w-12 h-12 bg-red-50 border border-red-200 rounded-xl flex items-center justify-center text-red-600">
                       <AlertTriangle size={22} />
@@ -178,7 +178,7 @@ export default function MentorshipRequests() {
               {removals.length === 0 ? (
                 <div className="card p-12 text-center text-slate-400">No pending removal requests.</div>
               ) : removals.map((req, i) => (
-                <motion.div key={req.id} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.05 }} className="card p-5 border-orange-200 bg-orange-50/20 shadow-xs">
+                <motion.div key={req.id} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }} className="card p-5 border-orange-200 bg-orange-50/20 shadow-xs">
                   <div className="flex items-start gap-4">
                     <div className="w-12 h-12 bg-orange-50 border border-orange-200 rounded-xl flex items-center justify-center text-orange-600">
                       <UserMinus size={22} />

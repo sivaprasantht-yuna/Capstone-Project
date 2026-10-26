@@ -98,7 +98,7 @@ function Popup({
         <div
           className="relative flex flex-col overflow-hidden border border-slate-200 bg-white shadow-2xl rounded-3xl"
           style={{
-            width: 'min(70vw, 860px)',
+            width: 'min(calc(100vw - 2rem), 860px)',
             height: 'min(80vh, 740px)',
           }}
           onClick={e => e.stopPropagation()}
@@ -106,7 +106,7 @@ function Popup({
           {!hideHeader && (
             /* Header */
             <div
-              className="flex items-center justify-between px-7 py-5 border-b border-slate-200 flex-shrink-0 bg-slate-50/50"
+              className="flex items-center justify-between px-4 sm:px-7 py-4 sm:py-5 border-b border-slate-200 flex-shrink-0 bg-slate-50/50"
             >
               <div className="flex items-center gap-3">
                 <div
@@ -135,7 +135,7 @@ function Popup({
           )}
 
           {/* Scrollable body */}
-          <div className="flex-1 overflow-y-auto p-7 no-scrollbar relative bg-white">
+          <div className="flex-1 overflow-y-auto p-4 sm:p-7 no-scrollbar relative bg-white">
             {hideHeader && (
               <button
                 onClick={(e) => {

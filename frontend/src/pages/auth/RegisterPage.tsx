@@ -231,7 +231,7 @@ export default function RegisterPage() {
       </div>
 
       {/* ── Right form panel ──────────────────────────────────────────────── */}
-      <div className="flex items-center justify-center p-6 lg:p-12 min-h-screen lg:min-h-0 overflow-y-auto bg-white">
+      <div className="flex items-center justify-center p-4 sm:p-6 lg:p-12 min-h-screen lg:min-h-0 overflow-y-auto overflow-x-hidden w-full max-w-full bg-white">
         <div className="w-full max-w-md py-6">
 
           {/* Mobile logo */}
@@ -256,11 +256,11 @@ export default function RegisterPage() {
             {step === 1 && (
               <motion.div
                 key="step1"
-                initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}
+                initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }}
                 transition={{ duration: 0.3 }}
               >
                 <p className="section-subhead mb-2">Step 1 of 2</p>
-                <h1 className="text-3xl font-bold text-slate-800 mb-2" style={{ fontFamily: 'Outfit, sans-serif' }}>
+                <h1 className="text-2xl sm:text-3xl font-bold text-slate-800 mb-2" style={{ fontFamily: 'Outfit, sans-serif' }}>
                   Choose your role
                 </h1>
                 <p className="text-slate-500 text-sm mb-8">
@@ -301,7 +301,7 @@ export default function RegisterPage() {
             {step === 2 && (
               <motion.div
                 key="step2"
-                initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}
+                initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }}
                 transition={{ duration: 0.3 }}
               >
                 <button
@@ -313,7 +313,7 @@ export default function RegisterPage() {
                 </button>
 
                 <p className="section-subhead mb-2">Step 2 of 2</p>
-                <h1 className="text-3xl font-bold text-slate-800 mb-1" style={{ fontFamily: 'Outfit, sans-serif' }}>
+                <h1 className="text-2xl sm:text-3xl font-bold text-slate-800 mb-1" style={{ fontFamily: 'Outfit, sans-serif' }}>
                   Create your account
                 </h1>
                 <p className="text-slate-500 text-sm mb-7">

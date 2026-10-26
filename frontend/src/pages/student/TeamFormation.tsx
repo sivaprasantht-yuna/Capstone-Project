@@ -49,7 +49,7 @@ export default function TeamFormation() {
           onClick={() => navigate('/student/team/create')}
           className="group relative overflow-hidden rounded-3xl cursor-pointer border border-blue-200 hover:border-blue-400 bg-gradient-to-br from-blue-50/80 to-indigo-50/60 transition-all duration-300 shadow-sm hover:shadow-md"
         >
-          <div className="relative z-10 p-8">
+          <div className="relative z-10 p-5 sm:p-8">
             {/* Icon */}
             <div
               className="w-14 h-14 rounded-2xl flex items-center justify-center mb-6 shadow-sm group-hover:scale-110 transition-transform duration-300"
@@ -103,7 +103,7 @@ export default function TeamFormation() {
           onClick={() => navigate('/student/team/join')}
           className="group relative overflow-hidden rounded-3xl cursor-pointer border border-teal-200 hover:border-teal-400 bg-gradient-to-br from-teal-50/80 to-emerald-50/60 transition-all duration-300 shadow-sm hover:shadow-md"
         >
-          <div className="relative z-10 p-8">
+          <div className="relative z-10 p-5 sm:p-8">
             {/* Icon */}
             <div
               className="w-14 h-14 rounded-2xl flex items-center justify-center mb-6 shadow-sm group-hover:scale-110 transition-transform duration-300"

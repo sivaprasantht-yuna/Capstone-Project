@@ -25,7 +25,7 @@ export default function Leaderboard() {
 
       <div className="space-y-3">
         {teams.map((team, i) => (
-          <motion.div key={team.id} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}
+          <motion.div key={team.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
             transition={{ delay: i * 0.05 }}
             className={`card p-4 flex items-center gap-4 ${i === 0 ? 'border-amber-300 bg-amber-50/20' : ''}`}>
             <div className="w-8 flex-shrink-0 flex items-center justify-center">
