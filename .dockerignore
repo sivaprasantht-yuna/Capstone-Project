@@ -1,0 +1,28 @@
+# ─── Docker Ignore ────────────────────────────────────────────────────────────
+# Speeds up Docker build and prevents sensitive files / cache from entering image
+
+.git
+.gitignore
+.vscode
+.agents
+frontend/
+node_modules/
+**/node_modules/
+dist/
+build/
+.env
+.env.*
+!.env.example
+__pycache__/
+**/__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.venv/
+.pytest_cache/
+target/
+*.class
+backend/target/
