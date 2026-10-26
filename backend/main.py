@@ -25,7 +25,8 @@ import dns_fix  # noqa: F401 — must be imported before any DB connections
 import asyncio
 
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Request
+from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from config import settings
@@ -64,6 +65,21 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    origin = request.headers.get("origin") or "*"
+    headers = {
+        "Access-Control-Allow-Origin": origin,
+        "Access-Control-Allow-Credentials": "true",
+        "Access-Control-Allow-Methods": "*",
+        "Access-Control-Allow-Headers": "*",
+    }
+    return JSONResponse(
+        status_code=500,
+        content={"detail": str(exc)},
+        headers=headers
+    )
 
 # ─── Mount All Routers ────────────────────────────────────────────────────────
 app.include_router(auth.router)

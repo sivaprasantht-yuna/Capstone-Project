@@ -19,17 +19,17 @@ def get_team_progress(
 
     milestones = db.query(models.Milestone).filter(
         models.Milestone.team_id == team_id
-    ).order_by(models.Milestone.sequence_order.asc().nullslast(), models.Milestone.id.asc()).all()
+    ).order_by(models.Milestone.sequence_order.asc(), models.Milestone.id.asc()).all()
     tasks = db.query(models.StudentTask).filter(models.StudentTask.team_id == team_id).all()
     members = db.query(models.TeamMember).filter(models.TeamMember.team_id == team_id).all()
 
     total_milestones = len(milestones)
-    completed_milestones = sum(1 for m in milestones if m.status in ["COMPLETED", "APPROVED"])
+    completed_milestones = sum(1 for m in milestones if (m.status or "").upper() in ["COMPLETED", "APPROVED"])
     total_tasks = len(tasks)
-    completed_tasks = sum(1 for t in tasks if t.status == "COMPLETED")
-    in_progress_tasks = sum(1 for t in tasks if t.status == "IN_PROGRESS")
-    pending_tasks = sum(1 for t in tasks if t.status in ["PENDING", "TODO"])
-    overdue_tasks = sum(1 for t in tasks if t.due_date and t.due_date < datetime.utcnow() and t.status != "COMPLETED")
+    completed_tasks = sum(1 for t in tasks if (t.status or "").upper() == "COMPLETED")
+    in_progress_tasks = sum(1 for t in tasks if (t.status or "").upper() == "IN_PROGRESS")
+    pending_tasks = sum(1 for t in tasks if (t.status or "").upper() in ["PENDING", "TODO"])
+    overdue_tasks = sum(1 for t in tasks if t.due_date and t.due_date < datetime.utcnow() and (t.status or "").upper() != "COMPLETED")
 
     progress_pct = 0.0
     if total_milestones > 0:
@@ -54,13 +54,13 @@ def get_team_progress(
         if not u:
             continue
         user_tasks = [t for t in tasks if t.assigned_to_id == u.id]
-        user_completed = sum(1 for t in user_tasks if t.status == "COMPLETED")
+        user_completed = sum(1 for t in user_tasks if (t.status or "").upper() == "COMPLETED")
         contrib_pct = round((len(user_tasks) / total_tasks * 100), 1) if total_tasks > 0 else (
             round(100.0 / len(members), 1) if members else 0.0
         )
         contributions_data.append({
             "studentId": u.id,
-            "studentName": u.name,
+            "studentName": u.name or "Student",
             "avatarInitial": (u.name[0].upper() if u.name else "U"),
             "contributionPercentage": contrib_pct,
             "tasksCompleted": user_completed,
@@ -68,8 +68,14 @@ def get_team_progress(
             "membershipStatus": getattr(member, "membership_status", "ACTIVE") or "ACTIVE"
         })
 
-    has_mentor = bool(team.mentor_id)
-    project_title = team.project.title if team.project else "Capstone Project"
+    # Mentorship is mapped through team.mentorships relationship
+    has_mentor = False
+    if team.mentorships:
+        has_mentor = any(getattr(ms, "status", "") == "ACCEPTED" for ms in team.mentorships)
+
+    project_title = "Capstone Project"
+    if team.project and team.project.title:
+        project_title = team.project.title
 
     team_health = "ON_TRACK"
     if team.is_at_risk or overdue_tasks > 2:
@@ -93,8 +99,8 @@ def get_team_progress(
         "teamStatus": team.status,
         "status": team.status,
         "projectTitle": project_title,
-        "totalScore": team.total_score,
-        "isAtRisk": team.is_at_risk,
+        "totalScore": team.total_score or 0,
+        "isAtRisk": bool(team.is_at_risk),
         "teamHealth": team_health,
         "currentPhase": current_phase,
         "progressPercentage": progress_pct,
@@ -166,36 +172,36 @@ def get_student_progress(
     ).all()
 
     tasks_total = len(tasks)
-    tasks_completed = sum(1 for t in tasks if t.status == "COMPLETED")
-    tasks_in_progress = sum(1 for t in tasks if t.status == "IN_PROGRESS")
-    tasks_pending = sum(1 for t in tasks if t.status in ["PENDING", "TODO"])
-    tasks_overdue = sum(1 for t in tasks if t.due_date and t.due_date < datetime.utcnow() and t.status != "COMPLETED")
-    points_earned = sum(t.point_value or 0 for t in tasks if t.status == "COMPLETED")
+    tasks_completed = sum(1 for t in tasks if (t.status or "").upper() == "COMPLETED")
+    tasks_in_progress = sum(1 for t in tasks if (t.status or "").upper() == "IN_PROGRESS")
+    tasks_pending = sum(1 for t in tasks if (t.status or "").upper() in ["PENDING", "TODO"])
+    tasks_overdue = sum(1 for t in tasks if t.due_date and t.due_date < datetime.utcnow() and (t.status or "").upper() != "COMPLETED")
+    points_earned = sum(t.point_value or 0 for t in tasks if (t.status or "").upper() == "COMPLETED")
 
     contribution_pct = 0.0
     all_team_tasks = db.query(models.StudentTask).filter(models.StudentTask.team_id == team_id).all()
     if all_team_tasks:
         contribution_pct = round((len(tasks) / len(all_team_tasks)) * 100, 1)
 
-    task_history_data = [
-        {
+    task_history_data = []
+    for t in tasks:
+        assigned_at = getattr(t, "assigned_at", None) or getattr(t, "created_at", None) or datetime.utcnow()
+        task_history_data.append({
             "id": t.id,
             "title": t.title,
             "description": t.description or "",
             "status": t.status,
             "dueDate": t.due_date.isoformat() if t.due_date else None,
-            "assignedAt": t.created_at.isoformat() if t.created_at else datetime.utcnow().isoformat(),
+            "assignedAt": assigned_at.isoformat() if isinstance(assigned_at, datetime) else str(assigned_at),
             "completedAt": t.completed_at.isoformat() if t.completed_at else None,
             "teamId": team_id,
             "teamName": team.team_name if team else "Team",
             "pointValue": t.point_value or 10
-        }
-        for t in tasks
-    ]
+        })
 
     evidences = db.query(models.ProjectEvidence).filter(
         models.ProjectEvidence.team_id == team_id,
-        models.ProjectEvidence.submitted_by_id == student_id
+        models.ProjectEvidence.uploaded_by_id == student_id
     ).all()
 
     evidence_data = [
@@ -214,9 +220,9 @@ def get_student_progress(
 
     return {
         "studentId": student_id,
-        "studentName": user.name,
+        "studentName": user.name or "Student",
         "department": user.department or "Engineering",
-        "email": user.email,
+        "email": user.email or "",
         "teamId": team_id,
         "personalProgress": contribution_pct,
         "tasksTotal": tasks_total,
