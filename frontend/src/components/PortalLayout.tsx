@@ -376,7 +376,7 @@ export default function PortalLayout({ navItems, children, portalTitle, portalCo
               animate={{ x: 0 }}
               exit={{ x: '-100%' }}
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-              className="md:hidden fixed inset-y-0 left-0 w-72 bg-white border-r border-slate-200 z-50 flex flex-col justify-between"
+              className="md:hidden fixed inset-y-0 left-0 w-72 bg-white border-r border-slate-200 z-[9999] flex flex-col justify-between shadow-2xl"
             >
               {/* Header */}
               <div className="p-4 border-b border-slate-100 flex items-center justify-between h-16">
@@ -457,25 +457,33 @@ export default function PortalLayout({ navItems, children, portalTitle, portalCo
                 })}
               </nav>
 
-              {/* User */}
-              <div className="p-4 border-t border-slate-100 flex items-center justify-between bg-slate-50">
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-full flex items-center justify-center text-white font-bold text-sm"
-                       style={{ background: roleColors.bg }}>
+              {/* User Profile & Prominent Logout */}
+              <div className="p-4 pb-8 sm:pb-4 border-t border-slate-200/80 bg-slate-50 flex flex-col gap-3">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div
+                    onClick={handleNavigateProfile}
+                    className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm flex-shrink-0 shadow-xs cursor-pointer"
+                    style={{ background: roleColors.bg }}
+                  >
                     {user?.name?.[0]?.toUpperCase()}
                   </div>
-                  <div className="min-w-0">
+                  <div className="min-w-0 flex-1">
                     <div className="text-sm font-semibold text-slate-800 truncate" style={{ fontFamily: 'Outfit, sans-serif' }}>
                       {user?.name}
                     </div>
                     {user?.institutionName && (
                       <div className="text-[11px] text-primary-600 font-medium truncate">{user.institutionName}</div>
                     )}
-                    <div className="text-xs text-slate-500 truncate">{user?.role}</div>
+                    <div className="text-xs text-slate-500 truncate">{user?.department || user?.role}</div>
                   </div>
                 </div>
-                <button onClick={handleLogout} className="text-slate-400 hover:text-danger p-2">
-                  <LogOut size={18} />
+
+                <button
+                  onClick={handleLogout}
+                  className="w-full py-2.5 px-4 rounded-xl flex items-center justify-center gap-2 bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 font-semibold text-sm transition-colors cursor-pointer shadow-2xs"
+                >
+                  <LogOut size={16} />
+                  <span>Sign Out</span>
                 </button>
               </div>
             </motion.aside>
@@ -601,6 +609,15 @@ export default function PortalLayout({ navItems, children, portalTitle, portalCo
                 )}
               </AnimatePresence>
             </div>
+
+            {/* Quick Logout Button for Mobile (Always visible & accessible on top) */}
+            <button
+              onClick={handleLogout}
+              className="md:hidden w-9 h-9 flex items-center justify-center rounded-lg text-slate-500 hover:text-danger hover:bg-red-50 transition-all border border-slate-200 cursor-pointer"
+              title="Sign Out"
+            >
+              <LogOut size={17} />
+            </button>
           </div>
         </header>
 

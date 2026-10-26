@@ -349,3 +349,22 @@ h1, h2, h3, h4, h5, h6 {
   outline: 2px solid rgba(26, 95, 180, 0.6);
   outline-offset: 2px;
 }
+
+/* ─── Suppress Netlify Injected Floating Badge & Drawer on Mobile ─────────── */
+#netlify-drawer-root,
+.netlify-badge,
+[data-netlify-deploy-id],
+[data-netlify-identity-menu],
+iframe[id^="netlify-drawer"],
+iframe[src*="netlify"],
+div[class*="netlify-drawer"],
+div[class*="feedback-drawer"] {
+  display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+  opacity: 0 !important;
+  z-index: -9999 !important;
+  position: absolute !important;
+  top: -9999px !important;
+  left: -9999px !important;
+}
